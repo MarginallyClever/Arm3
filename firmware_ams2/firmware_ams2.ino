@@ -24,9 +24,11 @@
 #define STEP_TYPE            (SINGLE)
 #if STEP_TYPE == MICROSTEP
 #define STEP_MULTIPLE        (16)
-#else if STEP_TYPE == SINGLE
+#endif
+#if STEP_TYPE == SINGLE
 #define STEP_MULTIPLE        (1)
-#else
+#endif
+#if !defined(STEP_MULTIPLE)
 #error Invalid STEP_TYPE
 #endif
 
@@ -38,12 +40,20 @@
 #define SHOULDER_TO_ELBOW    (25)
 #define ELBOW_TO_WRIST       (25)
 #define WRIST_TO_FINGER      (4)
-
+/*
 #define HOME_X               (13.3)
 #define HOME_Y               (0)
 #define HOME_Z               (23.91)
+*/
+#define HOME_X 25
+#define HOME_Y 0
+#define HOME_Z -1
+
 
 #define MAX_TOOLS            (6)
+
+
+#define RAD2DEG (180.0/PI)
 
 
 //------------------------------------------------------------------------------
@@ -51,7 +61,7 @@
 //------------------------------------------------------------------------------
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
-#include "utility/Adafruit_PWMServoDriver.h"
+//#include "utility/Adafruit_PWMServoDriver.h"
 
 #include "Vector3.h"
 
@@ -66,7 +76,6 @@ typedef struct {
   int dir;
   long over;
 } Axis;
-
 
 
 //------------------------------------------------------------------------------
@@ -87,8 +96,8 @@ Axis atemp;  // for line()
 char buffer[MAX_BUF];  // where we store the message until we get a ';'
 int sofar;  // how much is in the buffer
 
-float px, py, pz;  // location
-float ox, oy, oz;
+float px, py, pz;  // step count
+float ox, oy, oz;  // reported position
 
 // speeds
 float fr=0;  // human version
@@ -100,6 +109,7 @@ char mode_abs=1;  // absolute mode?
 
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
+
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -154,7 +164,7 @@ void position(float npx,float npy,float npz) {
  * @input newx the destination x position
  * @input newy the destination y position
  **/
-void onestep(int motor,int dir) {
+void motor_onestep(int motor,int dir) {
 #ifdef VERBOSE
   char *letter="XYZE";
   Serial.print(letter[motor]);
@@ -195,8 +205,6 @@ float atan3(float dy,float dx) {
  * @return 0 if successful, 1 if the IK solution cannot be found.
  */
 int IK(float x, float y,float z,float &a,float &b,float &c) {
-  c = atan2(y,x) * STEPS_PER_TURN;
-  
   // if we know the position of the wrist relative to the shoulder
   // we can use intersection of circles to find the elbow.
   // once we know the elbow position we can find the angle of each joint.
@@ -234,31 +242,45 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
     // with a and r0 we can find h, the distance from midpoint to the intersections.
     float h=sqrt(r0*r0-a*a);
     // the distance h on a line orthogonal to n and plane_normal gives us the two intersections.
-    Vector3 o(arm_plane.y,-arm_plane.x,0);
-    o.Normalize();
-    Vector3 elbow = mid - o * h;
-    //Vector3 elbow = mid + o * h;
+    Vector3 n(-arm_plane.y,arm_plane.x,0);
+    Vector3 r = es ^ n;
+    r.Normalize();
+    //Vector3 elbow = mid - r * h;
+    Vector3 elbow = mid + r * h;
     
   // find the shoulder angle using atan3(elbow-shoulder)
-  float ax=elbow | arm_plane;
+  Vector3 temp = elbow - shoulder;
+  float ax=temp | arm_plane;
   float ay=elbow.z;
-  b = atan2(ay,ax) * STEPS_PER_TURN;
+  a = atan2(ay,ax);
 
   // find the elbow angle
-  Vector3 temp = elbow - wrist;
+  temp = elbow - wrist;
   float bx = temp | arm_plane;
   float by = temp.z;
-  a = atan2(by,bx) * -STEPS_PER_TURN;
+  b = atan2(by,bx);
   
-#ifdef DEBUG
-  Serial.print(F("IK="));
-  Serial.print(a);
+  // the easiest part
+  c = atan2(y,x);
+
+//ifdef DEBUG
+  Serial.print(x);
   Serial.print("\t");
-  Serial.print(b);
+  Serial.print(y);
   Serial.print("\t");
-  Serial.print(c);
+  Serial.print(z);
+  Serial.print("\t=\t");
+  Serial.print(a*RAD2DEG);
+  Serial.print("\t");
+  Serial.print(b*RAD2DEG);
+  Serial.print("\t");
+  Serial.print(c*RAD2DEG);
   Serial.print("\n");
-#endif
+//#endif
+
+  a*= -STEPS_PER_TURN;
+  b*= STEPS_PER_TURN;
+  c*= -STEPS_PER_TURN;
 
   return 0;
 }
@@ -287,13 +309,13 @@ void line(float newx,float newy,float newz) {
 #ifdef VERBOSE
   Serial.println(F("Start >"));
 #endif
-  
+
   for( i=0; i<maxsteps; ++i ) {
     for(j=0;j<NUM_AXIES;++j) {
       a[j].over += a[j].absdelta;
       if(a[j].over >= maxsteps) {
         a[j].over -= maxsteps;
-        onestep(j,a[j].dir);
+        motor_onestep(j,a[j].dir);
       }
     }
     pause(step_delay);
@@ -331,12 +353,16 @@ void line_safe(float x,float y,float z) {
   Serial.print("posy ");  Serial.println(posy);
   Serial.print("posz ");  Serial.println(posz);
 */
-  float len=sqrt(dx*dx+dy*dy);
-//  Serial.print("LEN ");  Serial.println(len);
-  
+  float len=sqrt(dx*dx+dy*dy+dz*dz);
+//#ifdef DEBUG
+  Serial.print("LEN ");  Serial.println(len);
+//#endif
+
   long pieces=floor(len/CM_PER_SEGMENT);
-//  Serial.print("pieces ");  Serial.println(pieces);
-  
+//#ifdef DEBUG
+  Serial.print("pieces ");  Serial.println(pieces);
+//#endif
+
   float x0=ox;
   float y0=oy;
   float z0=oz;
@@ -371,21 +397,21 @@ float parsenumber(char code,float val) {
 } 
 
 
-void arm_tool_offset(int axis,float x,float y,float z) {
+void tool_set_offset(int axis,float x,float y,float z) {
   tool_offset[axis].x=x;
   tool_offset[axis].y=y;
   tool_offset[axis].z=z;
 }
 
 
-Vector3 arm_get_end_plus_offset() {
+Vector3 get_end_plus_offset() {
   return Vector3(tool_offset[current_tool].x + ox,
                  tool_offset[current_tool].y + oy,
                  tool_offset[current_tool].z + oz);
 }
 
 
-void arm_tool_change(int tool_id) {
+void tool_change(int tool_id) {
   if(tool_id < 0) tool_id=0;
   if(tool_id > MAX_TOOLS) tool_id=MAX_TOOLS;
   current_tool=tool_id;
@@ -438,7 +464,7 @@ void processCommand() {
   case  0: 
   case  1: { // move linear
     feedrate(parsenumber('F',fr));
-    Vector3 offset=arm_get_end_plus_offset();
+    Vector3 offset=get_end_plus_offset();
     line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
                parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z) );
@@ -452,7 +478,7 @@ void processCommand() {
   case 58:
   case 59: {  // 54-59 tool offsets
     int tool_id=cmd-54;
-    arm_tool_offset(tool_id,parsenumber('X',tool_offset[tool_id].x),
+    tool_set_offset(tool_id,parsenumber('X',tool_offset[tool_id].x),
                             parsenumber('Y',tool_offset[tool_id].y),
                             parsenumber('Z',tool_offset[tool_id].z));
     break;
@@ -460,7 +486,7 @@ void processCommand() {
   case 90:  mode_abs=1;  break;  // absolute mode
   case 91:  mode_abs=0;  break;  // relative mode
   case 92:  { // set logical position
-    Vector3 offset = arm_get_end_plus_offset();
+    Vector3 offset = get_end_plus_offset();
     position( parsenumber('X',offset.x),
               parsenumber('Y',offset.y),
               parsenumber('Z',offset.z) );
@@ -471,11 +497,21 @@ void processCommand() {
 
   cmd = parsenumber('M',-1);
   switch(cmd) {
-  case 6:  arm_tool_change(parsenumber('T',0));  break;
+  case 6:  tool_change(parsenumber('T',0));  break;
   case 17:  motor_enable();  break;
   case 18:  motor_disable();  break;
   case 100:  help();  break;
   case 114:  where();  break;
+  case 1000:  
+  case 1001:  
+  case 1002:  {
+    int id=cmd-1000;
+    int dir=parsenumber('D',1)==1?FORWARD:BACKWARD;
+    for(int i=0;i<10;i++) {
+      motor_onestep(id,dir);  
+    }
+    break;
+  }
   default:  break;
   }
 }
@@ -490,10 +526,21 @@ void ready() {
 }
 
 
-void setup_tools() {
+void tools_setup() {
   for(int i=0;i<MAX_TOOLS;++i) {
     tool_offset[i].Set(0,0,0);
   }
+}
+
+
+void motor_setup() {
+  AFMS0.begin(); // Start the shieldS
+  AFMS1.begin();
+  
+  m[0] = AFMS0.getStepper(STEPS_PER_TURN, 1);
+  m[1] = AFMS0.getStepper(STEPS_PER_TURN, 2);
+  m[2] = AFMS1.getStepper(STEPS_PER_TURN, 1);
+  m[3] = AFMS1.getStepper(STEPS_PER_TURN, 2);
 }
 
 
@@ -503,15 +550,8 @@ void setup_tools() {
 void setup() {
   Serial.begin(BAUD);  // open coms
 
-  AFMS0.begin(); // Start the shieldS
-  AFMS1.begin();
-  
-  m[0] = AFMS0.getStepper(STEPS_PER_TURN, 1);
-  m[1] = AFMS0.getStepper(STEPS_PER_TURN, 2);
-  m[2] = AFMS1.getStepper(STEPS_PER_TURN, 1);
-  m[3] = AFMS1.getStepper(STEPS_PER_TURN, 2);
-
-  setup_tools();
+  motor_setup();
+  tools_setup();
   
   help();  // say hello
   feedrate(DEFAULT_FEEDRATE);  // set default speed

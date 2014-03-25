@@ -263,7 +263,7 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
   // the easiest part
   c = atan2(y,x);
 
-//ifdef DEBUG
+#ifdef DEBUG
   Serial.print(x);
   Serial.print("\t");
   Serial.print(y);
@@ -276,7 +276,7 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
   Serial.print("\t");
   Serial.print(c*RAD2DEG);
   Serial.print("\n");
-//#endif
+#endif
 
   a*= -STEPS_PER_TURN;
   b*= STEPS_PER_TURN;
@@ -354,14 +354,14 @@ void line_safe(float x,float y,float z) {
   Serial.print("posz ");  Serial.println(posz);
 */
   float len=sqrt(dx*dx+dy*dy+dz*dz);
-//#ifdef DEBUG
+#ifdef DEBUG
   Serial.print("LEN ");  Serial.println(len);
-//#endif
+#endif
 
   long pieces=floor(len/CM_PER_SEGMENT);
-//#ifdef DEBUG
+#ifdef DEBUG
   Serial.print("pieces ");  Serial.println(pieces);
-//#endif
+#endif
 
   float x0=ox;
   float y0=oy;
@@ -376,6 +376,48 @@ void line_safe(float x,float y,float z) {
              dz*a+z0);
   }
   arm_line(x,y,z);
+}
+
+
+void arc_safe(float x,float y,float z,float cx,float cy,int dir) {
+    // get radius
+  float dx = ox - cx;
+  float dy = oy - cy;
+  float radius=sqrt(dx*dx+dy*dy);
+
+  // find angle of arc (sweep)
+  float angle1=atan3(dy,dx);
+  float angle2=atan3(y-cy,x-cx);
+  float theta=angle2-angle1;
+  
+  if(dir>0 && theta<0) angle2+=2*PI;
+  else if(dir<0 && theta>0) angle1+=2*PI;
+  
+  theta=angle2-angle1;
+  
+  // get length of arc
+  // float circ=PI*2.0*radius;
+  // float len=theta*circ/(PI*2.0);
+  // simplifies to
+  float len = abs(theta) * radius;
+
+  int i, segments = floor( len / CM_PER_SEGMENT );
+ 
+  float nx, ny, nz, angle3, scale;
+
+  for(i=0;i<segments;++i) {
+    // interpolate around the arc
+    scale = ((float)i)/((float)segments);
+    
+    angle3 = ( theta * scale ) + angle1;
+    nx = cx + cos(angle3) * radius;
+    ny = cy + sin(angle3) * radius;
+    nz = ( z - oz ) * scale + oz;
+    // send it to the planner
+    line_safe(nx,ny,nz);
+  }
+  
+  line_safe(x,y,z);
 }
 
 
@@ -445,7 +487,7 @@ void where() {
  * display helpful information
  */
 void help() {
-  Serial.print(F("GcodeCNCDemo4AxisV2 "));
+  Serial.print(F("Arm3-v1 "));
   Serial.println(VERSION);
   Serial.println(F("Commands:"));
   Serial.println(F("M18; - disable motors"));
@@ -462,12 +504,24 @@ void processCommand() {
   int cmd = parsenumber('G',-1);
   switch(cmd) {
   case  0: 
-  case  1: { // move linear
+  case  1: { // line
     feedrate(parsenumber('F',fr));
     Vector3 offset=get_end_plus_offset();
     line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
                parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z) );
+    break;
+  }
+  case  2:
+  case  3: {  // arc
+    feedrate(parsenumber('F',fr));
+    Vector3 offset=get_end_plus_offset();
+    arc_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+              parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+              parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
+              parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+              parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+              (cmd==2) );  // direction
     break;
   }
   case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell

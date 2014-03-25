@@ -1,11 +1,10 @@
-= Arm3-v1 =
+# arm3-v1
 
 An open source palletizing robot based on the ABB 460.
 
-For more information please visit http://www.marginallyclever.com/shop/robot-arms/palletizing-robot-1
+For more information please visit [Marginally Clever's official page](http://www.marginallyclever.com/shop/robot-arms)
 
-
-== copyright ==
+### copyright
 
 This file is part of Arm3-v1.
 

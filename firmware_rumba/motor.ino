@@ -79,6 +79,7 @@ void motor_setup() {
     motors[i].limit_switch_state=HIGH;
     pinMode(motors[i].limit_switch_pin,INPUT);
     digitalWrite(motors[i].limit_switch_pin,HIGH);
+    motors[i].limit_switch_state = digitalRead(motors[i].limit_switch_pin);
   }
   motor_enable();
 }
@@ -103,6 +104,45 @@ void motor_disable() {
   for(i=0;i<NUM_AXIES;++i) {
     digitalWrite(motors[i].enable_pin,HIGH);
   }
+}
+
+
+void find_home() {
+  /*
+  int i,c=0;
+  while(c!=0x7) {
+    for(i=0;i<3;++i) {
+      int state=digitalRead(motors[i].limit_switch_pin);
+      if(motors[i].limit_switch_state != state && (c & (1<<i)) == 0 ) {
+        motors[i].limit_switch_state = state;
+        c |= 1<<i;
+        Serial.print(F("Found "));
+        Serial.print(i);
+        Serial.print(" ");
+        Serial.println(state?"HIGH":"LOW");
+      }
+    }
+  }
+  Serial.println("Found home.");
+  */
+
+  while(digitalRead(motors[1].limit_switch_pin)==HIGH) {
+    motor_onestep(1,1);
+    delay(1);
+  }
+  Serial.println(F("Found 1"));
+  
+  while(digitalRead(motors[0].limit_switch_pin)==HIGH) {
+    motor_onestep(0,-1);
+    delay(1);
+  }
+  Serial.println(F("Found 0"));
+
+  while(digitalRead(motors[2].limit_switch_pin)==HIGH) {
+    motor_onestep(2,-1);
+    delay(1);
+  }
+  Serial.println(F("Found 2"));
 }
 
 

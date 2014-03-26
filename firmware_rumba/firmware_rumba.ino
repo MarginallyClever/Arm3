@@ -20,7 +20,7 @@
 #define MIN_FEEDRATE         (0.01)
 #define NUM_AXIES            (3)
 #define CM_PER_SEGMENT       (1)
-#define DEFAULT_FEEDRATE     (5000)
+#define DEFAULT_FEEDRATE     (1000)
 
 #define STEP_MULTIPLE        (16)  // microstepping
 #define STEPS_PER_TURN       (400*STEP_MULTIPLE)  // 400 step per turn * microstepping
@@ -95,7 +95,9 @@ float ox, oy, oz;  // reported position
 
 // speeds
 float fr=0;  // human version
-long step_delay;  // machine version
+long step_delay;  // milliseconds
+long step_delay_ms;  // milliseconds
+long step_delay_us;  // microseconds
 
 // settings
 char mode_abs=1;  // absolute mode?
@@ -119,6 +121,12 @@ void pause(long ms) {
 }
 
 
+void pause_efficient() {
+  delay(step_delay_ms);
+  delayMicroseconds(step_delay_us);
+}
+
+
 /**
  * Set the feedrate (speed motors will move)
  * @input nfr the new speed in steps/second
@@ -135,6 +143,8 @@ void feedrate(float nfr) {
     return;
   }
   step_delay = 1000000.0/nfr;
+  step_delay_us = step_delay % 1000;
+  step_delay_ms = step_delay / 1000;
   fr=nfr;
 }
 
@@ -279,7 +289,7 @@ void line(float newx,float newy,float newz) {
         motor_onestep(j,a[j].dir);
       }
     }
-    pause(step_delay);
+    pause_efficient();
   }
 
   px=newx;
@@ -486,6 +496,7 @@ void processCommand() {
     break;
   }
   case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell
+  case 28:  find_home();  break;
   case 54:
   case 55:
   case 56:

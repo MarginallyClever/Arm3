@@ -61,8 +61,6 @@
 //------------------------------------------------------------------------------
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
-//#include "utility/Adafruit_PWMServoDriver.h"
-
 #include "Vector3.h"
 
 
@@ -81,17 +79,8 @@ typedef struct {
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-// Initialize Adafruit stepper controller
-Adafruit_MotorShield AFMS0 = Adafruit_MotorShield(0x63);
-Adafruit_MotorShield AFMS1 = Adafruit_MotorShield(0x60);
-// Connect stepper motors with 400 steps per revolution (1.8 degree)
-// Create the motor shield object with the default I2C address
-Adafruit_StepperMotor *m[4];
-
-
 Axis a[4];  // for line()
 Axis atemp;  // for line()
-
 
 char buffer[MAX_BUF];  // where we store the message until we get a ';'
 int sofar;  // how much is in the buffer
@@ -105,7 +94,6 @@ long step_delay;  // machine version
 
 // settings
 char mode_abs=1;  // absolute mode?
-
 
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
@@ -157,38 +145,6 @@ void position(float npx,float npy,float npz) {
   oy=npy;
   oz=npz;
 }
-
-
-/**
- * Supports movement with both styles of Motor Shield
- * @input newx the destination x position
- * @input newy the destination y position
- **/
-void motor_onestep(int motor,int dir) {
-#ifdef VERBOSE
-  char *letter="XYZE";
-  Serial.print(letter[motor]);
-#endif
-  m[motor]->onestep(dir>0?FORWARD:BACKWARD,STEP_TYPE);
-}
-
-
-void motor_disable() {
-  int i;
-  for(i=0;i<4;++i) {
-    m[i]->release();
-  }
-}
-
-
-void motor_enable() {
-  int i;
-  for(i=0;i<4;++i) {
-    m[i]->onestep(BACKWARD,STEP_TYPE);
-    m[i]->onestep(FORWARD,STEP_TYPE);
-  }
-}
-
 
 
 // returns angle of dy/dx as a value from 0...2PI
@@ -584,17 +540,6 @@ void tools_setup() {
   for(int i=0;i<MAX_TOOLS;++i) {
     tool_offset[i].Set(0,0,0);
   }
-}
-
-
-void motor_setup() {
-  AFMS0.begin(); // Start the shieldS
-  AFMS1.begin();
-  
-  m[0] = AFMS0.getStepper(STEPS_PER_TURN, 1);
-  m[1] = AFMS0.getStepper(STEPS_PER_TURN, 2);
-  m[2] = AFMS1.getStepper(STEPS_PER_TURN, 1);
-  m[3] = AFMS1.getStepper(STEPS_PER_TURN, 2);
 }
 
 

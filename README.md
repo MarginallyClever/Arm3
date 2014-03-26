@@ -1,4 +1,4 @@
-# arm3-v1
+# Arm3-v1
 
 An open source palletizing robot based on the ABB 460.
 

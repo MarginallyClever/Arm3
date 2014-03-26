@@ -10,9 +10,9 @@
 // CONSTANTS
 //------------------------------------------------------------------------------
 //#define VERBOSE              (1)  // add to get a lot more serial output.
-//#define DEBUG              (1)  // add to get a lot more serial output.
+//#define DEBUG                (1)  // add to get a lot more serial output.
 
-#define VERSION              (2)  // firmware version
+#define VERSION              (3)  // firmware version
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 #define MIN_STEP_DELAY       (1)
@@ -20,7 +20,7 @@
 #define MIN_FEEDRATE         (0.01)
 #define NUM_AXIES            (3)
 #define CM_PER_SEGMENT       (1)
-#define DEFAULT_FEEDRATE     (500)
+#define DEFAULT_FEEDRATE     (5000)
 
 #define STEP_MULTIPLE        (16)  // microstepping
 #define STEPS_PER_TURN       (400*STEP_MULTIPLE)  // 400 step per turn * microstepping
@@ -31,14 +31,19 @@
 #define SHOULDER_TO_ELBOW    (25)
 #define ELBOW_TO_WRIST       (25)
 #define WRIST_TO_FINGER      (4)
-
+/*
 #define HOME_X               (13.3)
 #define HOME_Y               (0)
 #define HOME_Z               (23.91)
+*/
+#define HOME_X 25
+#define HOME_Y 0
+#define HOME_Z -1
+
 
 #define MAX_TOOLS            (6)
 
-#define MAX_MOTORS           (6)
+#define RAD2DEG              (180.0/PI)
 
 //------------------------------------------------------------------------------
 // INCLUDES
@@ -51,23 +56,29 @@
 //------------------------------------------------------------------------------
 // for line()
 typedef struct {
+  long step_count;
   long delta;
   long absdelta;
-  int dir;
   long over;
+  int dir;
 } Axis;
 
 
-
 typedef struct {
-  int motor_step_pin;
-  int motor_dir_pin;
-  int motor_enable_pin;
-  int motor_scale;  // 1 or -1
-
-  char limit_switch_pin;
+  int step_pin;
+  int dir_pin;
+  int enable_pin;
+  int limit_switch_pin;
   int limit_switch_state;
 } Motor;
+
+
+typedef struct {
+  Axis a[NUM_AXIES];
+  long steps;
+  long steps_left;
+  long feed_rate;
+} Segment;
 
 
 //------------------------------------------------------------------------------
@@ -76,13 +87,11 @@ typedef struct {
 Axis a[4];  // for line()
 Axis atemp;  // for line()
 
-Motor motors[MAX_MOTORS];
-
 char buffer[MAX_BUF];  // where we store the message until we get a ';'
 int sofar;  // how much is in the buffer
 
-float px, py, pz;  // location
-float ox, oy, oz;
+float px, py, pz;  // step count
+float ox, oy, oz;  // reported position
 
 // speeds
 float fr=0;  // human version
@@ -91,9 +100,9 @@ long step_delay;  // machine version
 // settings
 char mode_abs=1;  // absolute mode?
 
-
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
+
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -143,90 +152,11 @@ void position(float npx,float npy,float npz) {
 }
 
 
-/**
- * Supports movement with both styles of Motor Shield
- * @input newx the destination x position
- * @input newy the destination y position
- **/
-void onestep(int motor_id,int dir) {
-#ifdef VERBOSE
-  char *letter="XYZE";
-  Serial.print(letter[motor]);
-#endif
-  Motor &a = motors[motor_id];
-  dir *= a.motor_scale;
-  digitalWrite(a.motor_dir_pin,dir>0?LOW:HIGH);
-  digitalWrite(a.motor_step_pin,HIGH);
-  digitalWrite(a.motor_step_pin,LOW);
-}
-
-
-void motor_setup() {
-  // set up the pins
-  motors[0].motor_step_pin=17;
-  motors[0].motor_dir_pin=16;
-  motors[0].motor_enable_pin=48;
-  motors[0].limit_switch_pin=37;
-
-  motors[1].motor_step_pin=54;
-  motors[1].motor_dir_pin=47;
-  motors[1].motor_enable_pin=55;
-  motors[1].limit_switch_pin=36;
-
-  motors[2].motor_step_pin=57;
-  motors[2].motor_dir_pin=56;
-  motors[2].motor_enable_pin=62;
-  motors[2].limit_switch_pin=35;
-
-  motors[3].motor_step_pin=23;
-  motors[3].motor_dir_pin=22;
-  motors[3].motor_enable_pin=27;
-  motors[3].limit_switch_pin=34;
-
-  motors[4].motor_step_pin=26;
-  motors[4].motor_dir_pin=25;
-  motors[4].motor_enable_pin=24;
-  motors[4].limit_switch_pin=33;
-
-  motors[5].motor_step_pin=29;
-  motors[5].motor_dir_pin=28;
-  motors[5].motor_enable_pin=39;
-  motors[5].limit_switch_pin=32;
-  
-  for(int i=0;i<MAX_MOTORS;++i) {  
-    // set the motor pin & scale
-    motors[i].motor_scale=((i%2)? -1:1);
-    pinMode(motors[i].motor_step_pin,OUTPUT);
-    pinMode(motors[i].motor_dir_pin,OUTPUT);
-    pinMode(motors[i].motor_enable_pin,OUTPUT);
-    // set the switch pin
-    motors[i].limit_switch_state=HIGH;
-    pinMode(motors[i].limit_switch_pin,INPUT);
-    digitalWrite(motors[i].limit_switch_pin,HIGH);
-  }
-  
-}
-
-
-/**
- * Grips the power on the motors
- **/
-void motor_enable() {
-  int i;
-  for(i=0;i<NUM_AXIES;++i) {
-    digitalWrite(motors[i].motor_enable_pin,LOW);
-  }
-}
-
-
-/**
- * Releases the power on the motors
- **/
-void motor_disable() {
-  int i;
-  for(i=0;i<NUM_AXIES;++i) {
-    digitalWrite(motors[i].motor_enable_pin,HIGH);
-  }
+// returns angle of dy/dx as a value from 0...2PI
+float atan3(float dy,float dx) {
+  float a=atan2(dy,dx);
+  if(a<0) a=(PI*2.0)+a;
+  return a;
 }
 
 
@@ -236,8 +166,6 @@ void motor_disable() {
  * @return 0 if successful, 1 if the IK solution cannot be found.
  */
 int IK(float x, float y,float z,float &a,float &b,float &c) {
-  c = atan2(y,x) * STEPS_PER_TURN;
-  
   // if we know the position of the wrist relative to the shoulder
   // we can use intersection of circles to find the elbow.
   // once we know the elbow position we can find the angle of each joint.
@@ -275,31 +203,45 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
     // with a and r0 we can find h, the distance from midpoint to the intersections.
     float h=sqrt(r0*r0-a*a);
     // the distance h on a line orthogonal to n and plane_normal gives us the two intersections.
-    Vector3 o(arm_plane.y,-arm_plane.x,0);
-    o.Normalize();
-    Vector3 elbow = mid - o * h;
-    //Vector3 elbow = mid + o * h;
+    Vector3 n(-arm_plane.y,arm_plane.x,0);
+    Vector3 r = es ^ n;
+    r.Normalize();
+    //Vector3 elbow = mid - r * h;
+    Vector3 elbow = mid + r * h;
     
   // find the shoulder angle using atan3(elbow-shoulder)
-  float ax=elbow | arm_plane;
+  Vector3 temp = elbow - shoulder;
+  float ax=temp | arm_plane;
   float ay=elbow.z;
-  b = atan2(ay,ax) * STEPS_PER_TURN;
+  a = atan2(ay,ax);
 
   // find the elbow angle
-  Vector3 temp = elbow - wrist;
+  temp = elbow - wrist;
   float bx = temp | arm_plane;
   float by = temp.z;
-  a = atan2(by,bx) * -STEPS_PER_TURN;
+  b = atan2(by,bx);
   
+  // the easiest part
+  c = atan2(y,x);
+
 #ifdef DEBUG
-  Serial.print(F("IK="));
-  Serial.print(a);
+  Serial.print(x);
   Serial.print("\t");
-  Serial.print(b);
+  Serial.print(y);
   Serial.print("\t");
-  Serial.print(c);
+  Serial.print(z);
+  Serial.print("\t=\t");
+  Serial.print(a*RAD2DEG);
+  Serial.print("\t");
+  Serial.print(b*RAD2DEG);
+  Serial.print("\t");
+  Serial.print(c*RAD2DEG);
   Serial.print("\n");
 #endif
+
+  a*= -STEPS_PER_TURN;
+  b*= STEPS_PER_TURN;
+  c*= -STEPS_PER_TURN;
 
   return 0;
 }
@@ -328,13 +270,13 @@ void line(float newx,float newy,float newz) {
 #ifdef VERBOSE
   Serial.println(F("Start >"));
 #endif
-  
+
   for( i=0; i<maxsteps; ++i ) {
     for(j=0;j<NUM_AXIES;++j) {
       a[j].over += a[j].absdelta;
       if(a[j].over >= maxsteps) {
         a[j].over -= maxsteps;
-        onestep(j,a[j].dir);
+        motor_onestep(j,a[j].dir);
       }
     }
     pause(step_delay);
@@ -372,12 +314,16 @@ void line_safe(float x,float y,float z) {
   Serial.print("posy ");  Serial.println(posy);
   Serial.print("posz ");  Serial.println(posz);
 */
-  float len=sqrt(dx*dx+dy*dy);
-//  Serial.print("LEN ");  Serial.println(len);
-  
+  float len=sqrt(dx*dx+dy*dy+dz*dz);
+#ifdef DEBUG
+  Serial.print("LEN ");  Serial.println(len);
+#endif
+
   long pieces=floor(len/CM_PER_SEGMENT);
-//  Serial.print("pieces ");  Serial.println(pieces);
-  
+#ifdef DEBUG
+  Serial.print("pieces ");  Serial.println(pieces);
+#endif
+
   float x0=ox;
   float y0=oy;
   float z0=oz;
@@ -391,6 +337,48 @@ void line_safe(float x,float y,float z) {
              dz*a+z0);
   }
   arm_line(x,y,z);
+}
+
+
+void arc_safe(float x,float y,float z,float cx,float cy,int dir) {
+    // get radius
+  float dx = ox - cx;
+  float dy = oy - cy;
+  float radius=sqrt(dx*dx+dy*dy);
+
+  // find angle of arc (sweep)
+  float angle1=atan3(dy,dx);
+  float angle2=atan3(y-cy,x-cx);
+  float theta=angle2-angle1;
+  
+  if(dir>0 && theta<0) angle2+=2*PI;
+  else if(dir<0 && theta>0) angle1+=2*PI;
+  
+  theta=angle2-angle1;
+  
+  // get length of arc
+  // float circ=PI*2.0*radius;
+  // float len=theta*circ/(PI*2.0);
+  // simplifies to
+  float len = abs(theta) * radius;
+
+  int i, segments = floor( len / CM_PER_SEGMENT );
+ 
+  float nx, ny, nz, angle3, scale;
+
+  for(i=0;i<segments;++i) {
+    // interpolate around the arc
+    scale = ((float)i)/((float)segments);
+    
+    angle3 = ( theta * scale ) + angle1;
+    nx = cx + cos(angle3) * radius;
+    ny = cy + sin(angle3) * radius;
+    nz = ( z - oz ) * scale + oz;
+    // send it to the planner
+    line_safe(nx,ny,nz);
+  }
+  
+  line_safe(x,y,z);
 }
 
 
@@ -412,34 +400,24 @@ float parsenumber(char code,float val) {
 } 
 
 
-void arm_tool_offset(int axis,float x,float y,float z) {
+void tool_set_offset(int axis,float x,float y,float z) {
   tool_offset[axis].x=x;
   tool_offset[axis].y=y;
   tool_offset[axis].z=z;
 }
 
 
-Vector3 arm_get_end_plus_offset() {
+Vector3 get_end_plus_offset() {
   return Vector3(tool_offset[current_tool].x + ox,
                  tool_offset[current_tool].y + oy,
                  tool_offset[current_tool].z + oz);
 }
 
 
-void arm_tool_change(int tool_id) {
+void tool_change(int tool_id) {
   if(tool_id < 0) tool_id=0;
   if(tool_id > MAX_TOOLS) tool_id=MAX_TOOLS;
   current_tool=tool_id;
-}
-
-
-void find_home() {
-  // not implemented yet.
-  // back up until each switch is touched.
-
-  // knowing where the switches are we can now calculate the starting position of the robot.  
-  position(HOME_X,HOME_Y,HOME_Z);
-  IK(ox,oy,oz,px,py,pz);
 }
 
 
@@ -470,7 +448,7 @@ void where() {
  * display helpful information
  */
 void help() {
-  Serial.print(F("GcodeCNCDemo4AxisV2 "));
+  Serial.print(F("Arm3-v1 "));
   Serial.println(VERSION);
   Serial.println(F("Commands:"));
   Serial.println(F("M18; - disable motors"));
@@ -487,16 +465,27 @@ void processCommand() {
   int cmd = parsenumber('G',-1);
   switch(cmd) {
   case  0: 
-  case  1: { // move linear
+  case  1: { // line
     feedrate(parsenumber('F',fr));
-    Vector3 offset=arm_get_end_plus_offset();
+    Vector3 offset=get_end_plus_offset();
     line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
                parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z) );
     break;
   }
+  case  2:
+  case  3: {  // arc
+    feedrate(parsenumber('F',fr));
+    Vector3 offset=get_end_plus_offset();
+    arc_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+              parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+              parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
+              parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+              parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+              (cmd==2) );  // direction
+    break;
+  }
   case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell
-  case 28:  find_home();  break;
   case 54:
   case 55:
   case 56:
@@ -504,7 +493,7 @@ void processCommand() {
   case 58:
   case 59: {  // 54-59 tool offsets
     int tool_id=cmd-54;
-    arm_tool_offset(tool_id,parsenumber('X',tool_offset[tool_id].x),
+    tool_set_offset(tool_id,parsenumber('X',tool_offset[tool_id].x),
                             parsenumber('Y',tool_offset[tool_id].y),
                             parsenumber('Z',tool_offset[tool_id].z));
     break;
@@ -512,7 +501,7 @@ void processCommand() {
   case 90:  mode_abs=1;  break;  // absolute mode
   case 91:  mode_abs=0;  break;  // relative mode
   case 92:  { // set logical position
-    Vector3 offset = arm_get_end_plus_offset();
+    Vector3 offset = get_end_plus_offset();
     position( parsenumber('X',offset.x),
               parsenumber('Y',offset.y),
               parsenumber('Z',offset.z) );
@@ -523,11 +512,25 @@ void processCommand() {
 
   cmd = parsenumber('M',-1);
   switch(cmd) {
-  case 6:  arm_tool_change(parsenumber('T',0));  break;
+  case 6:  tool_change(parsenumber('T',0));  break;
   case 17:  motor_enable();  break;
   case 18:  motor_disable();  break;
   case 100:  help();  break;
   case 114:  where();  break;
+  case 1000:  
+  case 1001:  
+  case 1002:  
+  case 1003:  
+  case 1004:  
+  case 1005:  {
+    int id=cmd-1000;
+    int dir=parsenumber('D',1)==1?1:-1;
+    for(int i=0;i<10;i++) {
+      motor_onestep(id,dir);
+      delay(5);
+    }
+    break;
+  }
   default:  break;
   }
 }
@@ -542,7 +545,7 @@ void ready() {
 }
 
 
-void setup_tools() {
+void tools_setup() {
   for(int i=0;i<MAX_TOOLS;++i) {
     tool_offset[i].Set(0,0,0);
   }
@@ -556,11 +559,12 @@ void setup() {
   Serial.begin(BAUD);  // open coms
 
   motor_setup();
-  setup_tools();
+  tools_setup();
   
   help();  // say hello
   feedrate(DEFAULT_FEEDRATE);  // set default speed
-  find_home();
+  position(HOME_X,HOME_Y,HOME_Z);  // set staring position
+  IK(ox,oy,oz,px,py,pz);
   ready();
 }
 

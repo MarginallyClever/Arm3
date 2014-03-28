@@ -32,7 +32,8 @@ void motor_onestep(int motor_id,int dir) {
   Serial.print(motor_names[motor_id]);
 #endif
   Motor &a = motors[motor_id];
-  digitalWrite(a.dir_pin,dir>0?LOW:HIGH);
+
+  digitalWrite(a.dir_pin,dir*a.flip>0?LOW:HIGH);
   digitalWrite(a.step_pin,HIGH);
   digitalWrite(a.step_pin,LOW);
 }
@@ -44,31 +45,37 @@ void motor_setup() {
   motors[0].dir_pin=16;
   motors[0].enable_pin=48;
   motors[0].limit_switch_pin=37;
+  motors[0].flip=1;
 
   motors[1].step_pin=54;
   motors[1].dir_pin=47;
   motors[1].enable_pin=55;
   motors[1].limit_switch_pin=36;
+  motors[1].flip=1;
 
   motors[2].step_pin=57;
   motors[2].dir_pin=56;
   motors[2].enable_pin=62;
   motors[2].limit_switch_pin=35;
+  motors[2].flip=1;
 
   motors[3].step_pin=23;
   motors[3].dir_pin=22;
   motors[3].enable_pin=27;
   motors[3].limit_switch_pin=34;
+  motors[3].flip=1;
 
   motors[4].step_pin=26;
   motors[4].dir_pin=25;
   motors[4].enable_pin=24;
   motors[4].limit_switch_pin=33;
+  motors[4].flip=1;
 
   motors[5].step_pin=29;
   motors[5].dir_pin=28;
   motors[5].enable_pin=39;
   motors[5].limit_switch_pin=32;
+  motors[5].flip=1;
   
   for(int i=0;i<MAX_MOTORS;++i) {  
     // set the motor pin & scale
@@ -143,6 +150,10 @@ void find_home() {
     delay(1);
   }
   Serial.println(F("Found 2"));
+  
+  position(HOME_X,HOME_Y,HOME_Z);  // set staring position
+  IK(ox,oy,oz,px,py,pz);
+  Serial.println(F("Found home."));
 }
 
 

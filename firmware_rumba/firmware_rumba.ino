@@ -20,26 +20,30 @@
 #define MIN_FEEDRATE         (0.01)
 #define NUM_AXIES            (3)
 #define CM_PER_SEGMENT       (1)
-#define DEFAULT_FEEDRATE     (1000)
+#define DEFAULT_FEEDRATE     (1100)
 
-#define STEP_MULTIPLE        (16)  // microstepping
-#define STEPS_PER_TURN       (400*STEP_MULTIPLE)  // 400 step per turn * microstepping
+#define STEP_MICROSTEPPING   (16.0)  // microstepping
+#define MOTOR_STEPS_PER_TURN (400.0)
+#define GEAR_RATIO           (0.9)
+#define STEPS_PER_TURN       (MOTOR_STEPS_PER_TURN * STEP_MICROSTEPPING * GEAR_RATIO)
 
 // machine dimensions
 #define BASE_TO_SHOULDER_X   (5.37)  // measured in solidworks
 #define BASE_TO_SHOULDER_Z   (9.55)  // measured in solidworks
-#define SHOULDER_TO_ELBOW    (25)
-#define ELBOW_TO_WRIST       (25)
-#define WRIST_TO_FINGER      (4)
+#define SHOULDER_TO_ELBOW    (25.0)
+#define ELBOW_TO_WRIST       (25.0)
+#define WRIST_TO_FINGER      (4.0)
+
 /*
-#define HOME_X               (13.3)
+#define HOME_X               (13.3+WRIST_TO_FINGER)
 #define HOME_Y               (0)
 #define HOME_Z               (23.91)
-*/
-#define HOME_X 25
+//*/
+//*
+#define HOME_X (25.0+WRIST_TO_FINGER)
 #define HOME_Y 0
-#define HOME_Z -1
-
+#define HOME_Z -0.5
+//*/
 
 #define MAX_TOOLS            (6)
 
@@ -70,6 +74,7 @@ typedef struct {
   int enable_pin;
   int limit_switch_pin;
   int limit_switch_state;
+  int flip;
 } Motor;
 
 
@@ -175,7 +180,7 @@ float atan3(float dy,float dx) {
  * Convert cartesian XYZ to robot motor steps.
  * @return 0 if successful, 1 if the IK solution cannot be found.
  */
-int IK(float x, float y,float z,float &a,float &b,float &c) {
+int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   // if we know the position of the wrist relative to the shoulder
   // we can use intersection of circles to find the elbow.
   // once we know the elbow position we can find the angle of each joint.
@@ -207,7 +212,7 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
       return 1;
     }
     
-    a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2.0*d );
+    float a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2.0*d );
     // find the midpoint
     Vector3 mid = es * ( a / d ) + shoulder;
     // with a and r0 we can find h, the distance from midpoint to the intersections.
@@ -216,42 +221,44 @@ int IK(float x, float y,float z,float &a,float &b,float &c) {
     Vector3 n(-arm_plane.y,arm_plane.x,0);
     Vector3 r = es ^ n;
     r.Normalize();
-    //Vector3 elbow = mid - r * h;
-    Vector3 elbow = mid + r * h;
+    Vector3 elbow = mid - r * h;
+    //Vector3 elbow = mid + r * h;
     
   // find the shoulder angle using atan3(elbow-shoulder)
   Vector3 temp = elbow - shoulder;
+  temp.Normalize();
   float ax=temp | arm_plane;
-  float ay=elbow.z;
-  a = atan2(ay,ax);
+  float ay=temp.z;
+  angle_1 = atan2(ay,ax);
 
   // find the elbow angle
   temp = elbow - wrist;
+  temp.Normalize();
   float bx = temp | arm_plane;
   float by = temp.z;
-  b = atan2(by,bx);
+  angle_0 = atan2(by,bx);
   
   // the easiest part
-  c = atan2(y,x);
+  angle_2 = atan2(y,x);
 
-#ifdef DEBUG
+//#ifdef DEBUG
   Serial.print(x);
   Serial.print("\t");
   Serial.print(y);
   Serial.print("\t");
   Serial.print(z);
   Serial.print("\t=\t");
-  Serial.print(a*RAD2DEG);
+  Serial.print(angle_0*RAD2DEG);
   Serial.print("\t");
-  Serial.print(b*RAD2DEG);
+  Serial.print(angle_1*RAD2DEG);
   Serial.print("\t");
-  Serial.print(c*RAD2DEG);
+  Serial.print(angle_2*RAD2DEG);
   Serial.print("\n");
-#endif
+//#endif
 
-  a*= -STEPS_PER_TURN;
-  b*= STEPS_PER_TURN;
-  c*= -STEPS_PER_TURN;
+  angle_0 *= -STEPS_PER_TURN;
+  angle_1 *= STEPS_PER_TURN;
+  angle_2 *= -STEPS_PER_TURN;
 
   return 0;
 }
@@ -495,7 +502,7 @@ void processCommand() {
               (cmd==2) );  // direction
     break;
   }
-  case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell
+  case  4:  pause(parsenumber('P',0)*1000000);  break;  // dwell
   case 28:  find_home();  break;
   case 54:
   case 55:
@@ -516,6 +523,7 @@ void processCommand() {
     position( parsenumber('X',offset.x),
               parsenumber('Y',offset.y),
               parsenumber('Z',offset.z) );
+    IK(ox,oy,oz,px,py,pz);
     break;
   }
   default:  break;
@@ -536,7 +544,7 @@ void processCommand() {
   case 1005:  {
     int id=cmd-1000;
     int dir=parsenumber('D',1)==1?1:-1;
-    for(int i=0;i<10;i++) {
+    for(int i=0;i<STEPS_PER_TURN;i++) {
       motor_onestep(id,dir);
       delay(5);
     }

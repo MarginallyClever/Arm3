@@ -147,6 +147,10 @@ implements SerialPortEventListener, ActionListener {
 		if(portConfirmed) SendQueuedCommand();
 	}
 	
+	public void DeleteAllQueuedCommands() {
+		commandQueue.clear();
+	}
+	
 	// find all available serial ports for the settings->ports menu.
 	public void DetectSerialPorts() {
 		@SuppressWarnings("unchecked")

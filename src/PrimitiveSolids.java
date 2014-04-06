@@ -1,4 +1,5 @@
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.vector.Vector3f;
 
 
 public class PrimitiveSolids {
@@ -91,6 +92,27 @@ public class PrimitiveSolids {
 
 		GL11.glEnd();
 		
+		GL11.glPopMatrix();
+	}
+	
+
+	static void drawStar(Vector3f p) {
+		drawStar(p,1.0f);
+	}
+	
+	
+	static void drawStar(Vector3f p,float size) {
+		size/=2.0f;
+		GL11.glPushMatrix();
+		GL11.glTranslatef(p.x, p.y, p.z);
+		GL11.glBegin(GL11.GL_LINES);
+		GL11.glVertex3f(-size, 0, 0);
+		GL11.glVertex3f(size, 0, 0);
+		GL11.glVertex3f(0, -size, 0);
+		GL11.glVertex3f(0, size, 0);
+		GL11.glVertex3f(0, 0, -size);
+		GL11.glVertex3f(0, 0, size);
+		GL11.glEnd();
 		GL11.glPopMatrix();
 	}
 }

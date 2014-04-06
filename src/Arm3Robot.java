@@ -5,19 +5,23 @@ import org.lwjgl.util.vector.Vector3f;
 
 public class Arm3Robot 
 extends RobotWithSerialConnection {
+	//math constants
+	final float RAD2DEG = 180.0f/(float)Math.PI;
+
 	//machine dimensions
 	final float BASE_TO_SHOULDER_X   =(5.37f);  // measured in solidworks
 	final float BASE_TO_SHOULDER_Z   =(9.55f);  // measured in solidworks
 	final float SHOULDER_TO_ELBOW    =(25.0f);
 	final float ELBOW_TO_WRIST       =(25.0f);
 	final float WRIST_TO_FINGER      =(4.0f);
+	final float BASE_TO_SHOULDER_MINIMUM_LIMIT = 11.0f;
 	
 	final float HOME_X = (25.0f+WRIST_TO_FINGER);
 	final float HOME_Y = 0;
 	final float HOME_Z = -1;
 	
 	// robot arm coordinates.  Relative to base unless otherwise noted.
-	private Vector3f finger_tip = new Vector3f(HOME_X,HOME_Y,HOME_Z);
+	public Vector3f finger_tip = new Vector3f(HOME_X,HOME_Y,HOME_Z);
 	private Vector3f wrist = new Vector3f();
 	private Vector3f elbow = new Vector3f();
 	private Vector3f shoulder = new Vector3f();
@@ -38,12 +42,24 @@ extends RobotWithSerialConnection {
 		IK(finger_tip.x,finger_tip.y,finger_tip.z);
 	}
 	
+
+	protected void CheckAngleLimits() {
+		if (angle_0 < -180) angle_0 = -180;
+		if (angle_0 >  180) angle_0 =  180;
+		if (angle_2 <  -20) angle_2 = -20;
+		if (angle_2 >  180) angle_2 = 180;
+		if (angle_1 < -135) angle_1 = -135;
+		if (angle_1 >   80) angle_1 = 80;
+		if (angle_1 < -angle_2+ 10) angle_1 = -angle_2+ 10;
+		if (angle_1 > -angle_2+170) angle_1 = -angle_2+170;
+	}
+	
 	
 	/**
 	 * Convert cartesian XYZ to robot motor steps.
 	 * @return 0 if successful, 1 if the IK solution cannot be found.
 	 */
-	int IK(float x, float y,float z) {
+	protected int IK(float x, float y,float z) {
 	  // if we know the position of the wrist relative to the shoulder
 	  // we can use intersection of circles to find the elbow.
 	  // once we know the elbow position we can find the angle of each joint.
@@ -95,7 +111,7 @@ extends RobotWithSerialConnection {
 		Vector3f.sub(mid, s, elbow);
 		//Vector3f.add(mid, s, elbow);
 		    
-		  // find the shoulder angle using atan3(elbow-shoulder)
+		  // find the elbow-shoulder relative to the horizontal
 		  Vector3f temp = new Vector3f();
 		  Vector3f apn = new Vector3f();
 		  Vector3f.sub(elbow, shoulder, temp);
@@ -106,7 +122,7 @@ extends RobotWithSerialConnection {
 		  float ay = temp.z;
 		  angle_1 = (float) Math.atan2(ay,ax);
 		
-		  // find the elbow angle
+		  // find the angle elbow-wrist relative to the horizontal
 		  Vector3f.sub(elbow, wrist,temp);
 		  temp.normalise();
 		  apn.set(arm_plane.x,arm_plane.y,arm_plane.z);
@@ -118,8 +134,6 @@ extends RobotWithSerialConnection {
 		  // the easiest part
 		  angle_0 = (float) Math.atan2(y,x);
 		
-		  final float RAD2DEG = 180.0f/(float)Math.PI;
-		  
 		  angle_1 *= -RAD2DEG;
 		  angle_2 *= RAD2DEG;
 		  angle_0 *= RAD2DEG;
@@ -128,19 +142,44 @@ extends RobotWithSerialConnection {
 	}
 	
 	
-	public void FK() {
+	protected void FK() {
+		Vector3f arm_plane = new Vector3f();
+		Vector3f temp = new Vector3f();
 		
+		arm_plane.set((float)Math.cos(angle_0/RAD2DEG),
+					  (float)Math.sin(angle_0/RAD2DEG),
+					  0);
+		shoulder.set(arm_plane.x*BASE_TO_SHOULDER_X,
+					 arm_plane.y*BASE_TO_SHOULDER_X,
+					 BASE_TO_SHOULDER_Z);
+		
+		temp.set(arm_plane.x*(float)Math.cos(-angle_1/RAD2DEG)*SHOULDER_TO_ELBOW,
+				 arm_plane.y*(float)Math.cos(-angle_1/RAD2DEG)*SHOULDER_TO_ELBOW,
+				             (float)Math.sin(-angle_1/RAD2DEG)*SHOULDER_TO_ELBOW);
+		Vector3f.add(temp, shoulder, elbow);
+		
+		temp.set(arm_plane.x*(float)Math.cos(angle_2/RAD2DEG)*-ELBOW_TO_WRIST,
+				 arm_plane.y*(float)Math.cos(angle_2/RAD2DEG)*-ELBOW_TO_WRIST,
+				             (float)Math.sin(angle_2/RAD2DEG)*-ELBOW_TO_WRIST);
+		Vector3f.add(temp, elbow, wrist);
+		
+		temp.set(arm_plane.x*WRIST_TO_FINGER,
+				 arm_plane.y*WRIST_TO_FINGER,
+				 0);
+		Vector3f.add(temp, wrist, finger_tip);
 	}
 	
 	
-	public void update_fk(int delta) {
+	protected void update_fk(int delta) {
 		boolean changed=false;
 		if (Keyboard.isKeyDown(Keyboard.KEY_R)) {
 			angle_1 -= 0.35f * delta;
+			angle_2 += 0.35f * delta;
 			changed=true;
 		}
 		if (Keyboard.isKeyDown(Keyboard.KEY_F)) {
 			angle_1 += 0.35f * delta;
+			angle_2 -= 0.35f * delta;
 			changed=true;
 		}
 		if (Keyboard.isKeyDown(Keyboard.KEY_T)) {
@@ -160,48 +199,43 @@ extends RobotWithSerialConnection {
 			changed=true;
 		}
 
-		if(changed) {
-			if (angle_1 < -180) angle_1 = -180;
-			if (angle_1 >  180) angle_1 =  180;
-			if (angle_2 < -180) angle_2 = -180;
-			if (angle_2 >  180) angle_2 = 180;
-			if (angle_0 < -180) angle_0 = -180;
-			if (angle_0 >  180) angle_0 =  180;
+		if(changed==true) {
+			CheckAngleLimits();
 			FK();
 		}
 	}
 
 	
-	public void update_ik(int delta) {
+	protected void update_ik(int delta) {
 		final float vel=0.1f;
 		boolean changed=false;
 		Vector3f newtip = new Vector3f();
 		
 		newtip.set(finger_tip);
 		
-		if (Keyboard.isKeyDown(Keyboard.KEY_D)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_U)) {
 			newtip.x -= vel * delta;
 			changed=true;
 		}
-		if (Keyboard.isKeyDown(Keyboard.KEY_A)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_J)) {
 			newtip.x += vel * delta;
 			changed=true;
 		}
 		
-		if (Keyboard.isKeyDown(Keyboard.KEY_W)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_I)) {
 			newtip.y += vel * delta;
 			changed=true;
 		}
-		if (Keyboard.isKeyDown(Keyboard.KEY_S)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_K)) {
 			newtip.y -= vel * delta;
 			changed=true;
 		}
 		
-		if (Keyboard.isKeyDown(Keyboard.KEY_Q)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_O)) {
 			newtip.z += vel * delta;
 			changed=true;
 		}
-		if (Keyboard.isKeyDown(Keyboard.KEY_E)) {
+		if (Keyboard.isKeyDown(Keyboard.KEY_L)) {
 			newtip.z -= vel * delta;
 			changed=true;
 		}
@@ -219,7 +253,7 @@ extends RobotWithSerialConnection {
 			Vector3f.sub(newtip, shoulder, temp);
 			if(temp.length() < 50) {
 				temp.z=0;
-				if(temp.length() > 10) {
+				if(temp.length() > BASE_TO_SHOULDER_MINIMUM_LIMIT) {
 					if(IK(newtip.x,newtip.y,newtip.z)==0) {
 						finger_tip.set(newtip);
 					}
@@ -232,6 +266,10 @@ extends RobotWithSerialConnection {
 	public void update(int delta) {
 		update_fk(delta);
 		update_ik(delta);
+		
+		// this will probably do awful things to memory and flood the serial connection
+		arduino.DeleteAllQueuedCommands();
+		arduino.SendCommand("G0 X"+finger_tip.x+" Y"+finger_tip.y+" Z"+finger_tip.z);
 	}
 	
 	
@@ -239,13 +277,19 @@ extends RobotWithSerialConnection {
 		// these two should always match!
 		GL11.glPushMatrix();
 		GL11.glTranslatef(base.x, base.y, base.z);
+
+		//GL11.glColor3d(1,1,1);
+		//PrimitiveSolids.drawStar(finger_tip,5);
+		//PrimitiveSolids.drawStar(elbow,10);
+		//PrimitiveSolids.drawStar(shoulder,15);
+		
 		drawFK();
 		//drawIK();
 		GL11.glPopMatrix();
 	}
 	
 	
-	void drawIK() {
+	protected void drawIK() {
 		// finger tip
 		GL11.glBegin(GL11.GL_LINES);
 
@@ -269,7 +313,7 @@ extends RobotWithSerialConnection {
 	}
 	
 	
-	void drawFK() {
+	protected void drawFK() {
 		Vector3f a0 = new Vector3f(BASE_TO_SHOULDER_X,0,BASE_TO_SHOULDER_Z);
 		Vector3f a1 = new Vector3f(0,0,SHOULDER_TO_ELBOW);
 		Vector3f a2 = new Vector3f(0,0,ELBOW_TO_WRIST);

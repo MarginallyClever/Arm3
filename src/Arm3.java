@@ -12,14 +12,14 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 */
+import java.text.DecimalFormat;
+
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.util.Point;
 import org.lwjgl.util.glu.GLU;
-import org.lwjgl.util.vector.Vector3f;
 
 
 public class Arm3 
@@ -113,7 +113,7 @@ public class Arm3
 	
 	public void update(int delta) {
 		camera.update(delta);
-		robot.update_ik(delta);
+		robot.update(delta);
 		
 		updateFPS(); // update FPS Counter
 	}
@@ -146,8 +146,22 @@ public class Arm3
 	 * Calculate the FPS and set it in the title bar
 	 */
 	public void updateFPS() {
-		if (getTime() - lastFPS > 1000) {
-			Display.setTitle("FPS: " + fps + " "+robot.getAngle0()+","+robot.getAngle1()+","+robot.getAngle2());
+		if (getTime() - lastFPS > 250) {
+			DecimalFormat df = new DecimalFormat();
+			df.setMaximumFractionDigits(2);
+			Display.setTitle("FPS: " + fps + /*" "+
+					df.format(robot.getAngle0())+","+
+					df.format(robot.getAngle1())+","+
+					df.format(robot.getAngle2())+" ("+
+					df.format(robot.finger_tip.x)+","+
+					df.format(robot.finger_tip.y)+","+
+					df.format(robot.finger_tip.z)+")"*/" ("+
+					df.format(camera.position.x)+","+
+					df.format(camera.position.y)+","+
+					df.format(camera.position.z)+") "+
+					df.format(camera.pan)+","+
+					df.format(camera.tilt)
+					);
 			fps = 0;
 			lastFPS += 1000;
 		}
@@ -210,7 +224,7 @@ public class Arm3
 
 
 	void drawGrid() {
-		final int grid_size=40;
+		final int grid_size=50;
 		final int grid_space=1;
 		GL11.glColor3f(0.2f,0.2f,0.2f);
 		GL11.glNormal3f(0,0,1);
@@ -249,21 +263,6 @@ public class Arm3
 		GL11.glVertex3f(0,0,grid_size*2);
 	
 		GL11.glEnd();
-	}
-	
-	
-	void drawStar(Vector3f p) {
-		GL11.glPushMatrix();
-		GL11.glTranslatef(p.x, p.y, p.z);
-		GL11.glBegin(GL11.GL_LINES);
-		GL11.glVertex3f(-1, 0, 0);
-		GL11.glVertex3f(1, 0, 0);
-		GL11.glVertex3f(0, -1, 0);
-		GL11.glVertex3f(0, 1, 0);
-		GL11.glVertex3f(0, 0, -1);
-		GL11.glVertex3f(0, 0, 1);
-		GL11.glEnd();
-		GL11.glPopMatrix();
 	}
 	
 	

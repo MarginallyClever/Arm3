@@ -20,11 +20,11 @@
 #define MIN_FEEDRATE         (0.01)
 #define NUM_AXIES            (3)
 #define CM_PER_SEGMENT       (1)
-#define DEFAULT_FEEDRATE     (1100)
+#define DEFAULT_FEEDRATE     (900)
 
 #define STEP_MICROSTEPPING   (16.0)  // microstepping
 #define MOTOR_STEPS_PER_TURN (400.0)
-#define GEAR_RATIO           (0.9)
+#define GEAR_RATIO           (5.0)
 #define STEPS_PER_TURN       (MOTOR_STEPS_PER_TURN * STEP_MICROSTEPPING * GEAR_RATIO)
 
 // machine dimensions
@@ -33,13 +33,19 @@
 #define SHOULDER_TO_ELBOW    (25.0)
 #define ELBOW_TO_WRIST       (25.0)
 #define WRIST_TO_FINGER      (4.0)
+#define FINGER_TO_FLOOR      (0.5)
 
-/*
-#define HOME_X               (13.3+WRIST_TO_FINGER)
-#define HOME_Y               (0)
-#define HOME_Z               (23.91)
-//*/
+#define TWOPI                (PI*2)
+
 //*
+//#define HOME_X               (13.3)
+#define HOME_Y               (0)
+//#define HOME_Z               (23.91+FINGER_TO_FLOOR)
+#define HOME_X               (13.05)
+#define HOME_Z               (22.2)
+
+//*/
+/*
 #define HOME_X (25.0+WRIST_TO_FINGER)
 #define HOME_Y 0
 #define HOME_Z -0.5
@@ -127,7 +133,7 @@ void pause(long ms) {
 
 
 void pause_efficient() {
-  delay(step_delay_ms);
+  if(step_delay_ms>0) delay(step_delay_ms);
   delayMicroseconds(step_delay_us);
 }
 
@@ -136,7 +142,7 @@ void pause_efficient() {
  * Set the feedrate (speed motors will move)
  * @input nfr the new speed in steps/second
  */
-void feedrate(float nfr) {
+void set_feedrate(float nfr) {
   if(fr==nfr) return;  // same as last time?  quit now.
 
   if(nfr>MAX_FEEDRATE || nfr<MIN_FEEDRATE) {  // don't allow crazy feed rates
@@ -147,6 +153,7 @@ void feedrate(float nfr) {
     Serial.println(F("steps/s."));
     return;
   }
+  
   step_delay = 1000000.0/nfr;
   step_delay_us = step_delay % 1000;
   step_delay_ms = step_delay / 1000;
@@ -159,7 +166,7 @@ void feedrate(float nfr) {
  * @input npx new position x
  * @input npy new position y
  */
-void position(float npx,float npy,float npz) {
+void set_position(float npx,float npy,float npz) {
   // here is a good place to add sanity tests
   ox=npx;
   oy=npy;
@@ -241,7 +248,9 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   // the easiest part
   angle_2 = atan2(y,x);
 
-//#ifdef DEBUG
+  // angles are now in radians
+  
+#ifdef VERBOSE
   Serial.print(x);
   Serial.print("\t");
   Serial.print(y);
@@ -254,11 +263,11 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   Serial.print("\t");
   Serial.print(angle_2*RAD2DEG);
   Serial.print("\n");
-//#endif
+#endif
 
-  angle_0 *= -STEPS_PER_TURN;
-  angle_1 *= STEPS_PER_TURN;
-  angle_2 *= -STEPS_PER_TURN;
+  angle_0 *= -STEPS_PER_TURN/TWOPI;
+  angle_1 *= STEPS_PER_TURN/TWOPI;
+  angle_2 *= -STEPS_PER_TURN/TWOPI;
 
   return 0;
 }
@@ -312,12 +321,16 @@ void line(float newx,float newy,float newz) {
 void arm_line(float x,float y,float z) {
   float a,b,c;
   IK(x,y,z,a,b,c);
-  position(x,y,z);
+  set_position(x,y,z);
   line(a,b,c);
 }
 
 
 void line_safe(float x,float y,float z) {
+  x -= tool_offset[current_tool].x;
+  y -= tool_offset[current_tool].y;
+  z -= tool_offset[current_tool].z;
+  
   // split up long lines to make them straighter?
   float dx=x-ox;
   float dy=y-oy;
@@ -421,6 +434,12 @@ void tool_set_offset(int axis,float x,float y,float z) {
   tool_offset[axis].x=x;
   tool_offset[axis].y=y;
   tool_offset[axis].z=z;
+  Serial.print('X');
+  Serial.print(x);
+  Serial.print(" Y");
+  Serial.print(y);
+  Serial.print(" Z");
+  Serial.println(z);
 }
 
 
@@ -453,9 +472,10 @@ void output(char *code,float val) {
  * print the current position, feedrate, and absolute mode.
  */
 void where() {
-  output("X",ox);
-  output("Y",oy);
-  output("Z",oz);
+  Vector3 offset=get_end_plus_offset();
+  output("X",offset.x);
+  output("Y",offset.y);
+  output("Z",offset.z);
   output("F",fr);
   Serial.println(mode_abs?"ABS":"REL");
 } 
@@ -483,7 +503,7 @@ void processCommand() {
   switch(cmd) {
   case  0: 
   case  1: { // line
-    feedrate(parsenumber('F',fr));
+    set_feedrate(parsenumber('F',fr));
     Vector3 offset=get_end_plus_offset();
     line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
@@ -492,7 +512,7 @@ void processCommand() {
   }
   case  2:
   case  3: {  // arc
-    feedrate(parsenumber('F',fr));
+    set_feedrate(parsenumber('F',fr));
     Vector3 offset=get_end_plus_offset();
     arc_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
               parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
@@ -520,9 +540,9 @@ void processCommand() {
   case 91:  mode_abs=0;  break;  // relative mode
   case 92:  { // set logical position
     Vector3 offset = get_end_plus_offset();
-    position( parsenumber('X',offset.x),
-              parsenumber('Y',offset.y),
-              parsenumber('Z',offset.z) );
+    set_position( parsenumber('X',offset.x),
+                  parsenumber('Y',offset.y),
+                  parsenumber('Z',offset.z) );
     IK(ox,oy,oz,px,py,pz);
     break;
   }
@@ -580,10 +600,10 @@ void setup() {
   motor_setup();
   tools_setup();
   
-  help();  // say hello
-  feedrate(DEFAULT_FEEDRATE);  // set default speed
-  position(HOME_X,HOME_Y,HOME_Z);  // set staring position
+  set_feedrate(DEFAULT_FEEDRATE);  // set default speed
+  set_position(HOME_X,HOME_Y,HOME_Z);  // set staring position
   IK(ox,oy,oz,px,py,pz);
+  help();  // say hello
   ready();
 }
 

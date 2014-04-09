@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE rss PUBLIC "-//Netscape Communications//DTD RSS 0.91//EN"
+              "http://my.netscape.com/publish/formats/rss-0.91.dtd">
+<rss version="0.91">
+   <channel>
+
+   <title>mars</title>
+   <link>http://www.example.com/mars</link>
+   <description>Developer news from the MARS community</description>
+   <language>en-us</language>
+   <copyright>Copyright 2999-3001, MARS team.</copyright>
+   <managingEditor>editor@example.com</managingEditor>
+   <webMaster>webmaster@example.com</webMaster>
+
+      <image>
+        <title>mars</title>
+        <url>http://www.example.com/images/mynetscape3188.gif</url>
+        <link>http://www.example.com</link>
+        <width>88</width>
+        <height>31</height>
+        <description>News, opinions, tips and issues concerning MARS development</description>
+      </image>
+
+<item>
+<title>MARS 1.0 Released</title>
+<link>http://www.example.com/read?item=3322323</link>
+<description>The latest verion of MARS survival toolkit release.</description>
+</item>
+<item>
+<title>Rapid growth of MARS confirmed</title>
+<link>http://www.example.com/read?item=334300909</link>
+<description>Independent office EARTH confirmed that MARS is growing.
+
+Another in series of astrounding NONSENSE news!
+</description>
+</item>
+
+</channel>
+</rss>

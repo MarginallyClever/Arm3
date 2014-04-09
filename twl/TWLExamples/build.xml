@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See commented blocks below for -->
+<!-- some examples of how to customize the build. -->
+<!-- (If you delete it and reopen the project it will be recreated.) -->
+<!-- By default, only the Clean and Build commands use this build script. -->
+<!-- Commands such as Run, Debug, and Test only use this build script if -->
+<!-- the Compile on Save feature is turned off for the project. -->
+<!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
+<!-- in the project's Project Properties dialog box.-->
+<project name="TWLExamples" default="default" basedir=".">
+    <description>Builds, tests, and runs the project TWLExamples.</description>
+    <import file="nbproject/build-impl.xml"/>
+    <!--
+
+    There exist several targets which are by default empty and which can be 
+    used for execution of your tasks. These targets are usually executed 
+    before and after some main targets. They are: 
+
+      -pre-init:                 called before initialization of project properties
+      -post-init:                called after initialization of project properties
+      -pre-compile:              called before javac compilation
+      -post-compile:             called after javac compilation
+      -pre-compile-single:       called before javac compilation of single file
+      -post-compile-single:      called after javac compilation of single file
+      -pre-compile-test:         called before javac compilation of JUnit tests
+      -post-compile-test:        called after javac compilation of JUnit tests
+      -pre-compile-test-single:  called before javac compilation of single JUnit test
+      -post-compile-test-single: called after javac compilation of single JUunit test
+      -pre-jar:                  called before JAR building
+      -post-jar:                 called after JAR building
+      -post-clean:               called after cleaning build products
+
+    (Targets beginning with '-' are not intended to be called on their own.)
+
+    Example of inserting an obfuscator after compilation could look like this:
+
+        <target name="-post-compile">
+            <obfuscate>
+                <fileset dir="${build.classes.dir}"/>
+            </obfuscate>
+        </target>
+
+    For list of available properties check the imported 
+    nbproject/build-impl.xml file. 
+
+
+    Another way to customize the build is by overriding existing main targets.
+    The targets of interest are: 
+
+      -init-macrodef-javac:     defines macro for javac compilation
+      -init-macrodef-junit:     defines macro for junit execution
+      -init-macrodef-debug:     defines macro for class debugging
+      -init-macrodef-java:      defines macro for class execution
+      -do-jar-with-manifest:    JAR building (if you are using a manifest)
+      -do-jar-without-manifest: JAR building (if you are not using a manifest)
+      run:                      execution of project 
+      -javadoc-build:           Javadoc generation
+      test-report:              JUnit report generation
+
+    An example of overriding the target for project execution could look like this:
+
+        <target name="run" depends="TWLExamples-impl.jar">
+            <exec dir="bin" executable="launcher.exe">
+                <arg file="${dist.jar}"/>
+            </exec>
+        </target>
+
+    Notice that the overridden target depends on the jar target and not only on 
+    the compile target as the regular run target does. Again, for a list of available 
+    properties which you can use, check the target you are overriding in the
+    nbproject/build-impl.xml file. 
+
+    -->
+    
+    <taskdef name="p200ant"
+        classname="de.matthiasmann.p200ant.P200AntTask"
+        classpath="P200Ant.jar;JLzma.jar"/>
+
+    <target name="build-src-zip" unless="hudson.active">
+        <mkdir dir="${dist.dir}"/>
+        <zip zipfile="${dist.dir}/examples-src.zip" basedir="src"/>
+        <copy file="${project.TWL}/dist/twl-src.zip" tofile="${dist.dir}/twl-src.zip"/>
+    </target>
+
+    <target name="makeNativeJars">
+        <parallel>
+            <jar destfile="${dist.dir}/lwjgl-win32.jar" basedir="${natives.lwjgl}" compress="true" level="9">
+                <include name="lwjgl.dll"/>
+            </jar>
+            <jar destfile="${dist.dir}/lwjgl-win64.jar" basedir="${natives.lwjgl}" compress="true" level="9">
+                <include name="lwjgl64.dll"/>
+            </jar>
+            <jar destfile="${dist.dir}/lwjgl-linux.jar" basedir="${natives.lwjgl}" compress="true" level="9">
+                <include name="liblwjgl*.so"/>
+            </jar>
+            <jar destfile="${dist.dir}/lwjgl-mac.jar" basedir="${natives.lwjgl}" compress="true" level="9">
+                <include name="liblwjgl.jnilib"/>
+            </jar>
+        </parallel>
+    </target>
+
+    <target name="createWebStartLocal" depends="build-src-zip,makeNativeJars" unless="hudson.active">
+        <input message="keyPass" addproperty="keypass"/>
+
+        <signjar alias="MatthiasMann" keypass="${keypass}" storepass="${keypass}">
+            <fileset dir="${dist.dir}">
+                <include name="*.jar"/>
+                <include name="lib/*.jar"/>
+            </fileset>
+        </signjar>
+    </target>
+
+    <target name="createWebStartHudson" depends="makeNativeJars" if="hudson.active">
+        <delete file="hudson.keystore"/>
+        <genkey validity="14" dname="CN=TWL Examples" alias="TWLExamples" storepass="hudson" keystore="hudson.keystore"/>
+
+        <copy file="${libs.MXP1.classpath}" todir="${dist.dir}"/>
+        <copy file="${reference.TWL.jar}" todir="${dist.dir}"/>
+        <copy file="${reference.TWLEffects.jar}" todir="${dist.dir}"/>
+        <copy todir="${dist.dir}" flatten="true">
+            <path>
+                <pathelement path="${libs.LWJGL.classpath}"/>
+            </path>
+        </copy>
+        
+        <fileset id="jars2pack" dir="${dist.dir}">
+            <include name="*.jar"/>
+            <exclude name="lwjgl-*.jar"/>
+        </fileset>
+
+        <parallel>
+            <jar destfile="${dist.dir}/lwjgl-win.tmp.jar" basedir="${natives.lwjgl}" compress="false">
+                <include name="lwjgl.dll"/>
+                <include name="lwjgl64.dll"/>
+            </jar>
+            <jar destfile="${dist.dir}/lwjgl-linux.tmp.jar" basedir="${natives.lwjgl}" compress="false">
+                <include name="liblwjgl*.so"/>
+            </jar>
+            <jar destfile="${dist.dir}/lwjgl-mac.tmp.jar" basedir="${natives.lwjgl}" compress="false">
+                <include name="liblwjgl.jnilib"/>
+            </jar>
+        </parallel>
+
+        <p200ant repack="true" singlesegment="true">
+            <fileset refid="jars2pack"/>
+        </p200ant>
+
+        <signjar alias="TWLExamples" storepass="hudson" keystore="hudson.keystore">
+            <fileset dir="${dist.dir}">
+                <include name="*.jar"/>
+            </fileset>
+        </signjar>
+        
+        <p200ant destdir="${dist.dir}" singlesegment="true" gzip="true" lzma="true">
+            <fileset refid="jars2pack"/>
+        </p200ant>
+
+        <!--
+        <move todir="${dist.dir}">
+            <fileset dir="${dist.dir}">
+                <include name="*.pack.gz"/>
+            </fileset>
+            <mapper type="glob" from="*.pack.gz" to="*.pgz"/>
+        </move>
+        -->
+
+        <parallel>
+            <java fork="true" classpath="JLzma.jar" classname="SevenZip.LzmaAlone">
+                <jvmarg value="-Xmx256m"/>
+                <arg value="e"/>
+                <arg value="${dist.dir}/lwjgl-win.tmp.jar"/>
+                <arg value="${dist.dir}/lwjgl-win.jar.lzma"/>
+            </java>
+            <java fork="true" classpath="JLzma.jar" classname="SevenZip.LzmaAlone">
+                <jvmarg value="-Xmx256m"/>
+                <arg value="e"/>
+                <arg value="${dist.dir}/lwjgl-linux.tmp.jar"/>
+                <arg value="${dist.dir}/lwjgl-linux.jar.lzma"/>
+            </java>
+            <java fork="true" classpath="JLzma.jar" classname="SevenZip.LzmaAlone">
+                <jvmarg value="-Xmx256m"/>
+                <arg value="e"/>
+                <arg value="${dist.dir}/lwjgl-mac.tmp.jar"/>
+                <arg value="${dist.dir}/lwjgl-mac.jar.lzma"/>
+            </java>
+        </parallel>
+
+        <delete>
+            <fileset dir="${dist.dir}" includes="*.jar.pack"/>
+            <fileset dir="${dist.dir}" includes="*.tmp.jar"/>
+            <fileset dir="${dist.dir}" includes="README.TXT"/>
+        </delete>
+
+        <copy todir="${dist.dir}">
+            <fileset dir="." includes="**.jnlp"/>
+        </copy>
+    </target>
+
+    <target name="createAllInOneZip" depends="createWebStartHudson" if="hudson.active">
+        <mkdir dir="zip-tmp"/>
+        <copy todir="zip-tmp" flatten="true">
+            <path>
+                <pathelement path="${libs.LWJGL.classpath}"/>
+                <pathelement path="${libs.MXP1.classpath}"/>
+            </path>
+        </copy>
+        <zip destfile="${dist.dir}/twl.zip" level="9">
+            <zipfileset dir="." prefix="TWLExamples">
+                <exclude name="build/**"/>
+                <exclude name="dist/**"/>
+                <exclude name="zip-tmp/**"/>
+                <exclude name="hudson.keystore"/>
+                <exclude name=".hg/**"/>
+                <exclude name=".hgignore"/>
+            </zipfileset>
+            <zipfileset dir="${project.TWL}/" prefix="TWL">
+                <exclude name="build/**"/>
+                <exclude name="dist/**"/>
+                <exclude name=".hg/**"/>
+                <exclude name=".hgignore"/>
+            </zipfileset>
+            <zipfileset dir="${project.TWLEffects}/" prefix="TWLEffects">
+                <exclude name="build/**"/>
+                <exclude name="dist/**"/>
+                <exclude name=".hg/**"/>
+                <exclude name=".hgignore"/>
+            </zipfileset>
+            <zipfileset dir="${natives.lwjgl}/" prefix="TWLExamples/natives">
+                <include name="lwjgl*.dll"/>
+                <include name="liblwjgl*.so"/>
+                <include name="liblwjgl.jnilib"/>
+            </zipfileset>
+            <zipfileset dir="zip-tmp" prefix="external-libs"/>
+            <zipfileset dir="${project.TWL}/dist/">
+                <include name="TWL.jar"/>
+            </zipfileset>
+            <zipfileset dir="${project.TWLEffects}/dist/">
+                <include name="TWLEffects.jar"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    <target name="makedist" depends="default,createWebStartHudson,createWebStartLocal,createAllInOneZip">
+    </target>
+</project>

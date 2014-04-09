@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en" lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>XB1: XML Infoset API User Guide
+</title>
+</head>
+<body bgcolor="white">
+<h1>XB1: XML Infoset API User Guide</h1>
+<h2>What is it?</h2>
+<p>In Web services and other applications when XML is used it is important to 
+represent XML in an abstract way. <a href="http://www.w3.org/TR/xml-infoset/">
+XML Information Set (often called XML Infoset)</a> is a W3C specification that 
+precisely pays this role and defines number of such concepts like <b>Element 
+Information Item</b> (so called <i><b>eii</b></i>) that precisely define what is 
+XML element. If you do not know it go
+<a href="http://www.w3.org/TR/2004/REC-xml-infoset-20040204/#infoitem.element">
+read it</a> <b><i>NOW</i></b>!</p>
+<p>XB1 is an Java API for XML Infoset that strives to provide a straightforward 
+translation of XML Infoset <b><i>information items</i></b> and <b><i>properties</i></b> 
+into Java interfaces and methods.</p>
+<p>Name XB1 stands for <b>XML Builder Version One</b> as a second role XB1 API 
+plays is to allow easy construction of XML documents in an incremental way. 
+Typically when creating XML one needs to maintain also Java objects therefore 
+XB1 allows that element children are Objects. Additionally XB1 provides 
+XmlElementAdapter class to easily extend existing Element Information Items with 
+custom methods.</p>
+<p>XB1 is interface based so it is possible to swap-in different implementation 
+for example on top of DOM (though that is not a trivial task to do ...)</p>
+<h2>Gotcha</h2>
+<p>Here is list of not so intuitive parts of API</p>
+<ul>
+	<li><b>addChild and addElement works differently</b>! Method addElement will remove 
+	added element from other XML tree. However method addChild does not check 
+	that&nbsp; added child is an element so it is possible to add element using 
+	addChild() that is still in other tree. <b>Beware</b>! This can lead to 
+	strange bugs when traversing tree.</li>
+</ul>
+<h2> More ...</h2>
+<p>&nbsp;</p>
+<p>For more info contact <a href="http://www.extreme.indiana.edu/~aslom/">the author</a>.</p>
+<hr />
+<p>
+<a href="http://validator.w3.org/check/referer">
+<img src="validxhtml.gif" alt="Valid XHTML 1.0!" height="17" width="82" border="0" /></a>
+
+ </p>
+
+</body>
+</html>

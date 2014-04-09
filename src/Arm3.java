@@ -1,4 +1,4 @@
-/*
+
 import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.event.ActionEvent;
@@ -11,23 +11,38 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-*/
+
 import java.text.DecimalFormat;
+
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.AWTGLCanvas;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
+import de.matthiasmann.twl.GUI;
+import de.matthiasmann.twl.renderer.lwjgl.LWJGLRenderer;
+import de.matthiasmann.twl.theme.ThemeManager;
+
 
 public class Arm3 
-//implements ActionListener, MouseListener
+implements ActionListener
 {
-	Camera camera = new Camera();
-	Arm3Robot robot = new Arm3Robot();
+	//GUI gui;
 	
+	Camera camera = new Camera();
+
+	Arm3Robot robot0 = new Arm3Robot();
+	Arm3Robot robot1 = new Arm3Robot();
+	int activeRobot=1;
+
 	float screen_width=800;
 	float screen_height=600;
 	
@@ -39,7 +54,14 @@ public class Arm3
 	/** last fps time */
 	long lastFPS;
 
-	//JMenuBar mainMenu;
+	/** menus */
+	JMenuBar mainMenu;
+	JMenuItem buttonQuit;
+	
+	
+	public Arm3() {
+		robot1.base.x=50;
+	}
 	
 	
 	public void run() {
@@ -55,65 +77,86 @@ public class Arm3
 			update(delta);
 			renderGL();
 
-			Display.update();
-			Display.sync(60); // cap fps to 60fps
+			//Display.update();
+			//Display.sync(60); // cap fps to 60fps
 		}
 
-		Display.destroy();
+		//Display.destroy();
 	}
 
+
+	public void createWindow() {
+		try {
+			JFrame frame = new JFrame();
+			AWTGLCanvas canvas = new AWTGLCanvas();
+			canvas.setSize((int)screen_width,(int)screen_height);
+		
+	        frame.addWindowListener(new WindowAdapter() {
+	        	@Override
+	        	public void windowClosing(WindowEvent e) {
+	        		System.exit(0);
+	        	}
+	        });
+	
+	        mainMenu = new JMenuBar();
+	        updateMenu();
+	        
+			frame.add(canvas,BorderLayout.CENTER);
+			frame.setJMenuBar(mainMenu);
+			frame.pack();
+	        frame.setVisible(true);
 /*
+			Display.setDisplayMode(new DisplayMode((int)screen_width,(int)screen_height));
+			Display.setVSyncEnabled(true);
+			Display.create();
+/*
+	        LWJGLRenderer renderer = new LWJGLRenderer();
+	        GameUIDemo gameUI = new GameUIDemo();
+	        GUI gui = new GUI(gameUI, renderer);
+
+	        ThemeManager theme = ThemeManager.createThemeManager(getResource("gameui.xml"), renderer);
+	        gui.applyTheme(theme);*/
+	        
+		} catch (LWJGLException e) {
+			e.printStackTrace();
+			System.exit(0);
+		}
+	}
+	
+	
 	public void updateMenu() {
 		mainMenu.removeAll();
 		
         JMenu menu = new JMenu("Arm3");
-        JMenuItem button = new JMenuItem("Quit");
+        buttonQuit = new JMenuItem("Quit");
 
-        menu.add(button);
+        menu.add(buttonQuit);
         mainMenu.add(menu);
-	}*/
-	
-	
-	public void createWindow() {/*
-		JFrame frame = new JFrame();
-		Canvas canvas = new Canvas();
-		canvas.setSize((int)screen_width,(int)screen_height);
-		
-        frame.addWindowListener(new WindowAdapter() {
-        	@Override
-        	public void windowClosing(WindowEvent e) {
-        		System.exit(0);
-        	}
-        });
-
-        mainMenu = new JMenuBar();
-        updateMenu();
-        
-		frame.add(canvas,BorderLayout.CENTER);
-		frame.setJMenuBar(mainMenu);
-		frame.pack();
-        frame.setVisible(true);*/
-
-		try {
-			Display.setDisplayMode(new DisplayMode((int)screen_width,(int)screen_height));
-			//Display.setParent(canvas);
-		} catch (LWJGLException e) {
-			e.printStackTrace();
-			System.exit(0);
-		}
-		
-		try {
-			Display.create();
-		} catch (LWJGLException e) {
-			e.printStackTrace();
-			System.exit(0);
-		}
 	}
 	
 	
+	public void actionPerformed(ActionEvent e) {
+		Object o = e.getSource();
+		
+		if(o==buttonQuit) {
+			System.exit(0);
+			return;
+		}
+	}
+	
 	public void update(int delta) {
 		camera.update(delta);
-		robot.update(delta);
+
+		if (Keyboard.isKeyDown(Keyboard.KEY_Z) && !Keyboard.isRepeatEvent()) {
+			activeRobot=(activeRobot+1)%2;
+		}
+		
+		//gui.update();
+
+		switch(activeRobot) {
+		case 0: robot0.update(delta); break;
+		case 1: robot1.update(delta); break;
+		}
 		
 		updateFPS(); // update FPS Counter
 	}
@@ -216,8 +259,8 @@ public class Arm3
 		    diffuse.reset();
 		    GL11.glLight(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, diffuse);
 */
-
-			robot.render();
+			robot0.render();
+			robot1.render();
 			
 		GL11.glPopMatrix();
 	}

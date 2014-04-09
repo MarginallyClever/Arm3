@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE jnlp PUBLIC "-//Sun Microsystems, Inc.//DTD JNLP 1.5//EN" "http://www.netbeans.org/jnlp/DTD/jnlp.dtd">
+<jnlp codebase="http://twl.l33tlabs.org/demo" href="chatdemo.jnlp">
+  <information>
+    <title>TWL Chat Demo</title>
+    <vendor>Matthias Mann</vendor>
+    <homepage href="http://twl.l33tlabs.org"/>
+    <description>default</description>
+    <icon href="default"/>
+    <offline-allowed/>
+    <shortcut online="true"/>
+    <icon href="http://twl.l33tlabs.org/TWLLogo.png" kind="splash"/>
+  </information>
+  <security>
+    <all-permissions/>
+  </security>
+  <resources locale="" os="">
+    <j2se href="http://java.sun.com/products/autodl/j2se" max-heap-size="64M" version="1.5+"/>
+  </resources>
+    <resources locale="" os="">
+    <jar download="eager" href="TWLExamples.jar" main="true" version=""/>
+    <jar download="eager" href="xpp3-1.1.4c.jar" main="false" version=""/>
+    <jar download="eager" href="lwjgl.jar" main="false" version=""/>
+    <jar download="eager" href="TWL.jar" main="false" version=""/>
+  </resources>
+  <resources locale="" os="Windows" arch="x86">
+    <nativelib download="eager" href="lwjgl-win32.jar" version=""/>
+  </resources>
+  <resources locale="" os="Windows" arch="amd64">
+    <nativelib download="eager" href="lwjgl-win64.jar" version=""/>
+  </resources>
+  <resources locale="" os="Linux">
+    <nativelib download="eager" href="lwjgl-linux.jar" version=""/>
+  </resources>
+  <resources locale="" os="Mac">
+    <nativelib download="eager" href="lwjgl-mac.jar" version=""/>
+  </resources>
+  <application-desc main-class="chat.ChatDemo"/>
+</jnlp>

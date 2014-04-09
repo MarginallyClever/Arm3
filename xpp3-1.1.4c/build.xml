@@ -1,0 +1,795 @@
+<!--
+This is an ant build file compatible with ant version 1.3.
+
+All generated files are created under ${build} directory
+-->
+
+<project name="XPP3_V1" default="compile" basedir=".">
+
+  <!-- allow user to override properties with external file-->
+  <!-- use it to set: ${cvs_xmlpull_src} and ${cvs_xmlpull_addons} -->
+  <property file="build.properties" />
+
+  <property name="cvs_xmlpull_api" value="${cvs_xmlpull_src}/java/api"/>
+  <property name="cvs_xmlpull_samples" value="${cvs_xmlpull_src}/java/samples"/>
+  <property name="cvs_xmlpull_tests" value="${cvs_xmlpull_src}/java/tests"/>
+  <property name="cvs_xmlpull_xml_tests" value="${cvs_xmlpull_src}/xml/tests"/>
+  <property name="cvs_xmlpull_parser_pool" value="${cvs_xmlpull_addons}/java/parser_pool/src"/>
+  <property name="cvs_xmlpull_dom2_builder" value="${cvs_xmlpull_addons}/java/dom2_builder/src"/>
+  <property name="cvs_xmlpull_sax2_driver" value="${cvs_xmlpull_addons}/java/sax2_driver/src"/>
+  <property name="cvs_xmlpull_util" value="${cvs_xmlpull_addons}/java/util/src"/>
+  <property name="cvs_xmlpull_wrapper" value="${cvs_xmlpull_addons}/java/wrapper/src"/>
+  <property name="cvs_xmlpull_addons_tests" value="${cvs_xmlpull_addons}/java/tests"/>
+
+  <!-- set global properties for this build -->
+
+  <property name="name" value="xpp3"/>
+  <property name="year" value="2006"/>
+  <property name="version" value="1.1.4c"/>
+  <property name="xpp3_version" value="xpp3-${version}"/>
+  <property name="xpp3_min_version" value="xpp3_min-${version}"/>
+  <property name="xpp3_xpath_version" value="xpp3_xpath-${version}"/>
+  <property name="xpp3_tag" value="XPP3_${version}"/>
+  <property name="copyright"
+    value="Copyright (c) ${year} IU Extreme! Lab  http://www.extreme.indiana.edu/ All Rights Reserved."/>
+
+  <property name="debug" value="on"/>
+  <property name="deprecation" value="off"/>
+
+  <property name="doc" value="doc"/>
+
+  <property name="src" value="src/java"/>
+
+  <property name="src_api" value="${src}/api"/>
+  <property name="src_tests" value="${src}/tests"/>
+  <property name="src_addons_tests" value="${src}/addons_tests"/>
+  <property name="src_samples" value="${src}/samples"/>
+  <property name="src_dom2_builder" value="${src}/dom2_builder"/>
+  <property name="src_parser_pool" value="${src}/parser_pool"/>
+  <property name="src_sax2_driver" value="${src}/sax2_driver"/>
+  <property name="src_util" value="${src}/util"/>
+  <property name="src_wrapper" value="${src}/wrapper"/>
+  <property name="src_builder" value="${src}/builder"/>
+  <property name="src_builder_samples" value="${src}/builder_samples"/>
+  <property name="src_impl_min" value="${src}/mxp1_min"/>
+  <property name="src_impl_standard" value="${src}/mxp1_standard"/>
+  <property name="src_impl_serializer" value="${src}/serializer_impl"/>
+  <property name="src_xml_tests" value="src/xml/tests"/>
+  <property name="src_xpath" value="${src}/xpath"/>
+  <property name="src_xpath_samples" value="${src}/xpath_samples"/>
+
+  <property name="build" value="build"/>
+  <property name="build_dist" value="${build}/dist"/>
+  <property name="build_lib" value="${build}"/>
+  <property name="build_api" value="${build}/api"/>
+  <property name="build_classes" value="${build}/classes"/>
+  <property name="build_classes_min" value="${build}/classes_min"/>
+  <property name="build_xpath" value="${build}/xpath"/>
+  <property name="build_tests" value="${build}/tests"/>
+  <property name="build_tests_xml" value="${build_tests}/org/xmlpull/v1/tests/xml"/>
+  <property name="build_samples" value="${build}/samples"/>
+  <property name="build_apidoc" value="${doc}/api"/>
+  <property name="build_javadoc" value="${doc}/api_impl"/>
+  <property name="apidoc_packages" value="org.xmlpull.v1,org.xmlpull.v1.builder,org.xmlpull.v1.builder.xpath"/>
+  <property name="api_sourcepath" value="${src_api}:${src_impl_min}:${src_impl_standard}:${src_impl_serializer}"/>
+  <property name="javadoc_packages" value="${apidoc_packages},org.xmlpull.mxp1"/>
+  <property name="dist" value="${build}/dist/${xpp3_version}"/>
+  <property name="lite_suffix" value="src"/>
+  <property name="full_suffix" value="all"/>
+  <property name="dist_lite" value="${build}/dist/${xpp3_version}_${lite_suffix}"/>
+  <property name="dist_full" value="${build}/dist/${xpp3_version}_${full_suffix}"/>
+  <property name="dist_lite_zip" value="${dist_lite}.zip"/>
+  <property name="dist_full_zip" value="${dist_full}.zip"/>
+  <property name="dist_lite_tar" value="${dist_lite}.tar"/>
+  <property name="dist_full_tar" value="${dist_full}.tar"/>
+  <property name="dist_lite_tgz" value="${dist_lite}.tgz"/>
+  <property name="dist_full_tgz" value="${dist_full}.tgz"/>
+  <property name="jar"  value="${build_lib}/${xpp3_version}.jar"/>
+  <property name="jar_min"  value="${build_lib}/${xpp3_min_version}.jar"/>
+  <property name="jar_xpath"  value="${build_lib}/${xpp3_xpath_version}.jar"/>
+
+  <patternset id="all_source_files">
+        <exclude name="**/*-"/>
+        <exclude name="**/*~"/>
+        <exclude name="**/*.cpr"/>
+        <exclude name="**/*.mcp"/>
+        <exclude name="**/*_Data/**"/>
+  </patternset>
+
+  <patternset id="all_xml_files">
+        <include name="**/*.xml"/>
+  </patternset>
+
+
+  <!-- Display all the targets -->
+  <target name="usage">
+    <echo message=""/>
+    <echo message="ANT build for ${name} ${version}"/>
+    <echo message=""/>
+    <echo message="The following targets are available:"/>
+    <echo message="  usage      Lists the build targets"/>
+    <echo message="  compile    Builds all the packages, tests, sax2 driver and samples"/>
+    <echo message="  clean      Cleans the build classes directories"/>
+    <echo message="  all        clean and compile"/>
+    <echo message="  distclean  Cleans the build and distribution directories"/>
+    <echo message="  xpp3       Builds the main packages (including debugging info)"/>
+    <echo message="  samples    Builds the samples (including debugging info)"/>
+    <echo message="  sax2_driver  Builds SAX2 driver for XmlPull"/>
+    <echo message="  tests      Builds the tests (including debugging info)"/>
+    <echo message="  junit      Builds the tests and run JUNIT tests"/>
+    <echo message="  apidoc     Builds the API JavaDocs"/>
+    <echo message="  javadoc    Builds the full JavaDocs"/>
+    <echo message="  dist_lite  Builds source only distribution"/>
+    <echo message="  dist       Builds distribution with all files (including jar files)"/>
+    <echo message=""/>
+  </target>
+
+
+  <!-- =================================================================== -->
+  <!-- Preparing build environment                                         -->
+  <!-- =================================================================== -->
+  <target name="clean">
+    <delete dir="${build}"/>
+   <!--
+    <delete dir="${build_api}"/>
+    <delete dir="${build_classes}"/>
+    <delete dir="${build_classes_min}"/>
+    <delete dir="${build_lib}"/>
+    <delete dir="${build_samples}"/>
+    <delete dir="${build_xpath}"/>
+    <delete dir="${build_tests}"/>
+    <delete file="${dist_zip}"/>
+    <delete file="${dist_tgz}"/>
+   -->
+  </target>
+
+  <target name="prepare">
+    <mkdir dir="${build}"/>
+    <mkdir dir="${build_dist}"/>
+    <!--mkdir dir="${build_tests}"/-->
+    <mkdir dir="${build_classes}"/>
+    <touch file="${build_classes}/${xpp3_tag}_VERSION"/>
+    <available property="junit_present" classname="junit.framework.TestCase" />
+    <available property="dom2_present" classname="org.w3c.dom.Document" />
+    <available property="sax2_present" classname="org.xml.sax.XMLReader" />
+    <uptodate property="build_notRequired" targetfile="${jar}">
+      <srcfiles dir="${src_api}" includes="**/*.java"/>
+      <srcfiles dir="${src_impl_min}" includes="**/*.java"/>
+      <srcfiles dir="${src_impl_standard}" includes="**/*.java"/>
+      <srcfiles dir="${src_impl_serializer}" includes="**/*.java"/>
+      <srcfiles dir="${src_sax2_driver}" includes="**/*.java"/>
+    </uptodate>
+    <uptodate property="build_min_notRequired" targetfile="${jar_min}">
+      <srcfiles dir="${src_api}" includes="**/*.java"/>
+      <srcfiles dir="${src_impl_min}" includes="**/*.java"/>
+    </uptodate>
+    <!-- update sources from CVS is checked out -->
+    <available property="dist_repository_present" file="${dist_repository}" type="dir"/>
+    <available property="cvs_xmlpull_src_present" file="${cvs_xmlpull_src}" type="dir"/>
+    <available property="cvs_xmlpull_api_present" file="${cvs_xmlpull_api}" type="dir"/>
+    <available property="cvs_xmlpull_samples_present" file="${cvs_xmlpull_samples}" type="dir"/>
+    <available property="cvs_xmlpull_tests_present" file="${cvs_xmlpull_tests}" type="dir"/>
+    <available property="cvs_xmlpull_addons_tests_present" file="${cvs_xmlpull_addons_tests}" type="dir"/>
+    <available property="cvs_xmlpull_xml_tests_present" file="${cvs_xmlpull_xml_tests}" type="dir"/>
+    <available property="cvs_xmlpull_addons_present" file="${cvs_xmlpull_addons}" type="dir"/>
+    <available property="cvs_xmlpull_parser_pool_present" file="${cvs_xmlpull_parser_pool}" type="dir"/>
+    <available property="cvs_xmlpull_dom2_builder_present" file="${cvs_xmlpull_dom2_builder}" type="dir"/>
+    <available property="cvs_xmlpull_sax2_driver_present" file="${cvs_xmlpull_sax2_driver}" type="dir"/>
+    <available property="cvs_xmlpull_util_present" file="${cvs_xmlpull_util}" type="dir"/>
+    <available property="cvs_xmlpull_wrapper_present" file="${cvs_xmlpull_wrapper}" type="dir"/>
+  </target>
+
+  <target name="check_junit" unless="junit_present" depends="prepare">
+    <echo message="Warning: JUnit dependencies were not resolved."/>
+  </target>
+
+  <target name="check_dom2" unless="dom2_present" depends="prepare">
+    <echo message="Warning: DOM2 dependencies were not resolved."/>
+  </target>
+
+  <target name="check_sax2" unless="sax2_present" depends="prepare">
+    <echo message="Warning: SAX2 dependencies were not resolved."/>
+  </target>
+
+  <target name="check_cvs_xmlpull_src" unless="cvs_xmlpull_src_present" depends="prepare">
+    <echo message="Warning: could not find directory with XmlPull API source code."/>
+  </target>
+
+  <target name="check_cvs_xmlpull_addons" unless="cvs_xmlpull_addons_present" depends="prepare">
+    <echo message="Warning: could not find Addons directory (should be checked out from XmlPull API CVS)."/>
+  </target>
+
+  <target name="dependencies" depends="prepare,check_junit"/>
+
+  <!-- Use this target to check that all optional dependencies are fulfilled -->
+  <target name="checks" depends="prepare,check_junit,check_sax2,check_cvs_xmlpull_src,check_cvs_xmlpull_addons"/>
+
+  <!-- =================================================================== -->
+  <!-- Compilation tasks                                                   -->
+  <!-- =================================================================== -->
+
+  <target name="update" depends="check_cvs_xmlpull_addons,check_cvs_xmlpull_src,update_api,update_addons,update_samples,update_tests"/>
+  <target name="update_addons" depends="update_parser_pool,update_dom2_builder,update_sax2_driver,update_util,update_wrapper"/>
+  <target name="update_api" depends="prepare"  if="cvs_xmlpull_api_present">
+    <copy todir="${src_api}">
+      <fileset dir="${cvs_xmlpull_api}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="api" depends="prepare,update_api">
+    <mkdir dir="${build_api}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_api}" destdir="${build_api}" classpath="${build_api}"/>
+  </target>
+
+  <target name="impl_min" depends="prepare,api">
+    <mkdir dir="${build_classes_min}"/>
+    <touch file="${build_classes_min}/${xpp3_tag}_MIN_VERSION"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_api}" destdir="${build_classes_min}" classpath="${build_classes_min}">
+       <include name="**/*.java"/>
+       <exclude name="**/*Factory.java"/>
+       <exclude name="**/*Serializer.java"/>
+    </javac>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_impl_min}" destdir="${build_classes_min}" classpath="${build_classes_min}"/>
+    <mkdir dir="${build_classes_min}/META-INF/services"/>
+    <copy todir="${build_classes_min}/META-INF/services">
+      <fileset dir="${src_impl_min}/META-INF/services/"/>
+    </copy>
+  </target>
+
+  <target name="jar_min" unless="build_min_notRequired" depends="impl_min">
+    <mkdir dir="${build_lib}"/>
+    <jar jarfile="${jar_min}">
+      <fileset dir="${build_classes_min}"/>
+    </jar>
+  </target>
+
+  <target name="serializer" depends="prepare,api">
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_impl_serializer}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="builder" depends="prepare,api">
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_builder}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+
+  <target name="builder_samples" depends="builder">
+    <!--javac debug="${debug}" deprecation="${deprecation}"
+       srcdir="${src_builder_samples}" destdir="${build_samples}" classpath="${build_api}:${build_classes}"/>
+-->
+  </target>
+
+  <target name="xpath" depends="builder">
+    <mkdir dir="${build_xpath}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_xpath}" destdir="${build_xpath}" classpath="${build_api}:${build_classes}"/>
+  </target>
+
+  <target name="xpath_samples" depends="check_junit,xpath" if="junit_present">
+    <mkdir dir="${build_samples}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_xpath_samples}" destdir="${build_samples}" classpath="${build_api}:${build_classes}:${build_xpath}"/>
+  </target>
+
+  <target name="impl" depends="impl_min,serializer">
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_impl_min}" destdir="${build_classes}" classpath="${build_api}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+       srcdir="${src_impl_standard}" destdir="${build_classes}" classpath="${build_api}"/>
+    <mkdir dir="${build_classes}/META-INF/services"/>
+    <copy todir="${build_classes}/META-INF/services">
+      <fileset dir="${src_impl_standard}/META-INF/services/"/>
+    </copy>
+  </target>
+
+  <target name="update_parser_pool" depends="prepare" if="cvs_xmlpull_parser_pool_present">
+    <copy todir="${src_parser_pool}">
+      <fileset dir="${cvs_xmlpull_parser_pool}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="parser_pool" depends="api,update_parser_pool">
+    <mkdir dir="${build_classes}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_parser_pool}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="update_dom2_builder" depends="prepare" if="cvs_xmlpull_dom2_builder_present">
+    <copy todir="${src_dom2_builder}">
+      <fileset dir="${cvs_xmlpull_dom2_builder}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="dom2_builder" depends="api,check_dom2,update_dom2_builder">
+    <mkdir dir="${build_classes}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_dom2_builder}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="dom2" depends="dom2_builder"/>
+
+  <target name="update_sax2_driver" depends="prepare" if="cvs_xmlpull_sax2_driver_present">
+    <copy todir="${src_sax2_driver}">
+      <fileset dir="${cvs_xmlpull_sax2_driver}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="sax2_driver" depends="api,check_sax2,update_sax2_driver">
+    <mkdir dir="${build_classes}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_sax2_driver}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="sax2" depends="sax2_driver"/>
+
+  <target name="update_util" depends="prepare" if="cvs_xmlpull_util_present">
+    <copy todir="${src_util}">
+      <fileset dir="${cvs_xmlpull_util}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="util" depends="api,update_util">
+    <mkdir dir="${build_classes}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_util}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="update_wrapper" depends="prepare" if="cvs_xmlpull_wrapper_present">
+    <copy todir="${src_wrapper}">
+      <fileset dir="${cvs_xmlpull_wrapper}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="wrapper" depends="api,util,update_wrapper">
+    <mkdir dir="${build_classes}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_wrapper}" destdir="${build_classes}" classpath="${build_api}"/>
+  </target>
+
+  <target name="jar" unless="build_notRequired" depends="impl,builder,sax2_driver,wrapper,dom2_builder,parser_pool">
+    <mkdir dir="${build_lib}"/>
+    <jar jarfile="${jar}">
+      <fileset dir="${build_classes}"/>
+      <fileset dir="${build_api}"/>
+    </jar>
+  </target>
+
+  <target name="jar_xpath" unless="build_notRequired" depends="xpath,jar">
+    <mkdir dir="${build_lib}"/>
+    <jar jarfile="${jar_xpath}">
+      <fileset dir="${build_xpath}"/>
+    </jar>
+  </target>
+
+  <target name="xpp3" depends="jar_min,jar,jar_xpath"/>
+
+  <target name="update_samples" depends="prepare" if="cvs_xmlpull_samples_present">
+    <copy todir="${src_samples}">
+      <fileset dir="${cvs_xmlpull_samples}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="xmlpull_samples" depends="api,update_samples">
+    <mkdir dir="${build_samples}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_samples}" destdir="${build_samples}" classpath="${build_api}"/>
+  </target>
+
+  <target name="samples" depends="xmlpull_samples,builder_samples,xpath_samples" />
+
+
+  <target name="update_api_tests" depends="prepare" if="cvs_xmlpull_tests_present">
+    <copy todir="${src_tests}">
+      <fileset dir="${cvs_xmlpull_tests}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="update_addons_tests" depends="prepare" if="cvs_xmlpull_addons_tests_present">
+    <copy todir="${src_addons_tests}">
+      <fileset dir="${cvs_xmlpull_addons_tests}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="update_xml_tests" depends="prepare" if="cvs_xmlpull_xml_tests_present">
+    <copy todir="${src_xml_tests}">
+      <fileset dir="${cvs_xmlpull_xml_tests}">
+         <patternset refid="all_xml_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="update_tests" depends="update_api_tests,update_addons_tests,update_xml_tests" />
+
+  <target name="tests_addons" if="junit_present"
+     depends="check_junit,impl,update_tests,wrapper,dom2_builder">
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_addons_tests}" destdir="${build_tests}"
+      classpath="${build_api}:${build_classes}"      
+      />
+  </target>
+
+  <target name="tests_main" if="junit_present"
+     depends="check_junit,impl,update_tests">
+    <mkdir dir="${build_tests}"/>
+    <javac debug="${debug}" deprecation="${deprecation}" source="1.2" target="1.1"
+      srcdir="${src_tests}" destdir="${build_tests}" classpath="${build_api}"
+      />
+    <copy todir="${build_tests_xml}">
+      <fileset dir="${src_xml_tests}">
+         <patternset refid="all_xml_files"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="compile" depends="xpp3,samples,tests,sax2_driver"/>
+
+  <target name="tests" depends="tests_main,tests_addons" />
+
+  <target name="all" depends="clean,compile"/>
+
+  <!-- =================================================================== -->
+  <!-- JUnit automatic tests                                               -->
+  <!-- =================================================================== -->
+
+  <path id="test-classpath">
+    <pathelement location="${build_api}" />
+    <pathelement location="${build_classes}" />
+    <pathelement location="${build_tests}" />
+    <pathelement path="${java.class.path}" />
+  </path>
+
+  <target name="junit_main" if="junit_present" depends="check_junit,tests_main">
+
+    <java classname="org.xmlpull.v1.tests.PackageTests" fork="yes">
+      <!--arg value="foo_argument_1" /-->
+      <!--arg value="samples/list.xml" /-->
+      <classpath>
+        <path refid="test-classpath" />
+        <!--pathelement location="${build_samples}" /-->
+      </classpath>
+    </java>
+
+  </target>
+
+  <target name="junit_addons" if="junit_present" depends="check_junit,tests_addons">
+
+    <java classname="AllXmlPullAddonsTests" fork="yes">
+      <classpath>
+        <path refid="test-classpath" />
+      </classpath>
+    </java>
+
+  </target>
+
+
+  <target name="junit" depends="junit_main,junit_addons"/>
+
+  <!-- =================================================================== -->
+  <!-- Creates the API documentation                                       -->
+  <!-- =================================================================== -->
+  <target name="apidoc" depends="xpp3">
+    <delete dir="${build_apidoc}"/>
+    <mkdir dir="${build_apidoc}"/>
+    <javadoc packagenames="${apidoc_packages}"
+             public="yes"
+             sourcepath="${api_sourcepath}"
+             destdir="${build_apidoc}"
+             author="true"
+             version="true"
+             use="true"
+             windowtitle="${name} ${version} API"
+             doctitle="${name}"
+             bottom="${copyright}"
+             link="http://java.sun.com/j2se/1.4/docs/api/"
+    />
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Creates the JAVADOC documentation                                   -->
+  <!-- =================================================================== -->
+  <target name="javadoc" depends="xpp3">
+    <delete dir="${build_javadoc}"/>
+    <mkdir dir="${build_javadoc}"/>
+    <javadoc packagenames="${javadoc_packages}"
+             sourcepath="${api_sourcepath}"
+             destdir="${build_javadoc}"
+             author="true"
+             version="true"
+             use="true"
+             windowtitle="${name} ${version} Implementation API"
+             doctitle="Implementation ${name}"
+             bottom="${copyright}"
+    />
+  </target>
+
+
+  <!-- =================================================================== -->
+  <!-- Creates the xpp3 distribution                                       -->
+  <!-- =================================================================== -->
+  <target name="dist_lite" depends="compile, apidoc">
+    <delete dir="${dist}"/>
+    <delete file="${dist_lite_zip}"/>
+
+    <mkdir dir="${dist}"/>
+
+    <mkdir dir="${dist}/build"/>
+    <copy todir="${dist}/build">
+      <fileset dir="${build}">
+        <include name="api/**"/>
+        <include name="classes/**"/>
+        <include name="classes_min/**"/>
+        <include name="samples/**"/>
+        <include name="xpath/**"/>
+        <include name="tests/**"/>
+      </fileset>
+    </copy>
+
+    <!--copy todir="${dist}">
+      <fileset dir="${build}/lib">
+        <include name="${xpp3_version}*.jar"/>
+      </fileset>
+    </copy>
+    -->
+
+    <copy todir="${dist}">
+      <fileset dir="${build_lib}">
+        <include name="${name}*.jar"/>
+      </fileset>
+    </copy>
+
+    <!-- sources should be copied after build to make it newer -->
+    <mkdir dir="${dist}/src"/>
+
+
+    <mkdir dir="${dist}/${src_api}"/>
+    <copy todir="${dist}/${src_api}">
+      <fileset dir="${src_api}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_impl_min}"/>
+    <copy todir="${dist}/${src_impl_min}">
+      <fileset dir="${src_impl_min}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+    <mkdir dir="${dist}/${src_impl_standard}"/>
+    <copy todir="${dist}/${src_impl_standard}">
+      <fileset dir="${src_impl_standard}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+    <mkdir dir="${dist}/${src_impl_serializer}"/>
+    <copy todir="${dist}/${src_impl_serializer}">
+      <fileset dir="${src_impl_serializer}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_samples}"/>
+    <copy todir="${dist}/${src_samples}">
+      <fileset dir="${src_samples}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_sax2_driver}"/>
+    <copy todir="${dist}/${src_sax2_driver}">
+      <fileset dir="${src_sax2_driver}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_parser_pool}"/>
+    <copy todir="${dist}/${src_parser_pool}">
+      <fileset dir="${src_parser_pool}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_dom2_builder}"/>
+    <copy todir="${dist}/${src_dom2_builder}">
+      <fileset dir="${src_dom2_builder}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_util}"/>
+    <copy todir="${dist}/${src_util}">
+      <fileset dir="${src_util}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_wrapper}"/>
+    <copy todir="${dist}/${src_wrapper}">
+      <fileset dir="${src_wrapper}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_builder}"/>
+    <copy todir="${dist}/${src_builder}">
+      <fileset dir="${src_builder}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_xpath}"/>
+    <copy todir="${dist}/${src_xpath}">
+      <fileset dir="${src_xpath}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_xpath_samples}"/>
+    <copy todir="${dist}/${src_xpath_samples}">
+      <fileset dir="${src_xpath_samples}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${src_tests}"/>
+    <copy todir="${dist}/${src_tests}">
+      <fileset dir="${src_tests}">
+         <patternset refid="all_source_files"/>
+      </fileset>
+    </copy>
+
+
+    <mkdir dir="${dist}/${src_xml_tests}"/>
+    <copy todir="${dist}/${src_xml_tests}">
+      <fileset dir="${src_xml_tests}">
+         <patternset refid="all_xml_files"/>
+      </fileset>
+    </copy>
+
+    <mkdir dir="${dist}/${doc}"/>
+    <copy todir="${dist}/${doc}">
+      <fileset dir="${doc}">
+        <exclude name="**/*impl*/**"/>
+      </fileset>
+    </copy>
+
+    <copy file="LICENSE.txt" tofile="${dist}/LICENSE.txt"/>
+    <copy file="README.html" tofile="${dist}/README.html"/>
+    <!--copy file="README.txt" tofile="${dist}/README.txt"/-->
+    <copy file="build.xml" tofile="${dist}/build.xml"/>
+
+    <copy todir="${dist}">
+      <fileset dir=".">
+        <include name="*.sh"/>
+        <include name="*.bat"/>
+      </fileset>
+    </copy>
+
+
+    <fixcrlf srcdir="${dist}"
+       eol="lf" eof="remove"
+       includes="**/*.html,**/*.txt,**/*.sh"
+     />
+
+    <fixcrlf srcdir="${dist}"
+       eol="crlf"
+       includes="**/*.bat"
+     />
+
+
+      <mkdir dir="${dist}/lib"/>
+      <copy todir="${dist}/lib">
+        <fileset dir="lib">
+          <exclude name="**/*.jar"/>
+        </fileset>
+      </copy>
+
+     <chmod perm="a+x" dir="${dist}"
+       includes="**/*.sh" />
+
+    <zip zipfile="${dist_lite_zip}" basedir="${build}/dist"
+      includes="${xpp3_version}/**"
+      excludes="${xpp3_version}/build/**,${xpp3_version}/doc/api/**"/>
+
+     <tar tarfile="${dist_lite_tar}"
+         longfile="gnu">
+
+          <tarfileset dir="${build}/dist" mode="755" username="aslom" group="ewww">
+              <include name="${xpp3_version}/**/*.sh"/>
+              <exclude name="${xpp3_version}/build/**"/>
+              <exclude name="${xpp3_version}/doc/api/**"/>
+         </tarfileset>
+         <tarfileset dir="${build}/dist" username="aslom" group="ewww">
+             <include name="${xpp3_version}/**"/>
+             <exclude name="${xpp3_version}/**/*.sh"/>
+             <exclude name="${xpp3_version}/build/**"/>
+             <exclude name="${xpp3_version}/doc/api/**"/>
+         </tarfileset>
+
+     </tar>
+
+
+     <gzip zipfile="${dist_lite_tgz}" src="${dist_lite_tar}" />
+    <delete file="${dist_lite_tar}"/>
+
+  </target>
+
+  <target name="dist_lib" depends="dist_lite">
+      <mkdir dir="${dist}/lib"/>
+      <copy todir="${dist}/lib">
+        <fileset dir="lib">
+          <exclude name="**/*jsse*/*.jar"/>
+        </fileset>
+      </copy>
+
+    <delete file="${dist_full_zip}"/>
+    <zip zipfile="${dist_full_zip}" basedir="${build}/dist"
+      includes="${xpp3_version}/**"/>
+
+     <!--tar tarfile="${dist_full_tar}" basedir="${build}/dist"
+         longfile="gnu"
+         includes="${xpp3_version}/**" /-->
+
+     <tar tarfile="${dist_full_tar}"
+         longfile="gnu">
+
+         <tarfileset dir="${build}/dist" mode="755" username="aslom" group="ewww">
+              <include name="${xpp3_version}/**/*.sh"/>
+         </tarfileset>
+         <tarfileset dir="${build}/dist" username="aslom" group="ewww">
+             <include name="${xpp3_version}/**"/>
+             <exclude name="${xpp3_version}/**/*.sh"/>
+         </tarfileset>
+
+     </tar>
+
+     <gzip zipfile="${dist_full_tgz}" src="${dist_full_tar}" />
+     <delete file="${dist_full_tar}"/>
+
+     <antcall target="dist_repository" />
+
+  </target>
+
+  <target name="dist_repository" depends="prepare" if="dist_repository_present">
+    <copy todir="${dist_repository}/distributions">
+      <fileset dir="${build}/dist">
+        <include name="${xpp3_version}*.tgz"/>
+        <include name="${xpp3_version}*.zip"/>
+      </fileset>
+    </copy>
+
+
+    <copy todir="${dist_repository}/jars">
+      <fileset dir="${build_lib}">
+        <include name="${name}*.jar"/>
+      </fileset>
+    </copy>
+
+  </target>
+
+  <target name="dist" depends="dist_lib,dist_repository"/>
+
+</project>
+
+

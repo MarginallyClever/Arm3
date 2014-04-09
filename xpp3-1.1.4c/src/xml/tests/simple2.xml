@@ -1,0 +1,15 @@
+<tests xmlns="http://xmlpull.org/v1/tests/2002-08.xsd">
+ <!-- test case derived from possible bug reported by Manoj to xmlpull-user -->
+ <test-parser name="simple test with text content">
+  <create-parser/> <input-inline>&lt;?xml version="1.0" encoding="utf-8" ?><![CDATA[
+   <string xmlns="http://whappdev1/bscwebservices/"> &lt;Table&gt;
+        &lt;ClientID&gt; BS &lt;/ClientID&gt;&gt;/Table&gt;</string> ]]></input-inline>
+  <set-feature>http://xmlpull.org/v1/doc/features.html#process-namespaces</set-feature>
+  <expect type="START_DOCUMENT"/>
+  <next-tag/><expect type="START_TAG" namespace="http://whappdev1/bscwebservices/"
+                      name="string" empty="false"/>
+  <next-text text=" &lt;Table>&#10;        &lt;ClientID> BS &lt;/ClientID>>/Table>"/>
+  <expect type="END_TAG" namespace="http://whappdev1/bscwebservices/" name="string"/>
+  <next/><expect type="END_DOCUMENT"/>
+ </test-parser>
+</tests>

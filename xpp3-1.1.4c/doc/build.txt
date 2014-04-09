@@ -1,0 +1,59 @@
+Building XPP3
+-------------
+
+If ANT 1.4+ and JUnit 3.7 is already available use provided build.xml
+otherwise you can use provided ANT if full distribution was downloaded
+and or taken from CVS, if source distribution was downloaded please
+look into lib/anr and lib/junit and put required jar files there.
+
+XPP3 can be built uning a simple scripted build system on top ANT
+that will work if ANT jar files are present in lib/ant direcotry
+(see this directory for instructions how to get ANT files).
+If ANT is already available on CLASSPATH it can be used directly.
+
+First make sure that JAVA_HOME environment variable points
+to your installation of JDK version 1.1 or above.
+
+If you want to use other ANT verion simply replace JAR files already existing
+in lib subdirectory (check README.txt files there for description).
+
+To build XPP3 from scratch use build script 
+* on UNIX it is ./build.sh and 
+* on WINDOWS build.bat refered here as "build":
+and then call
+
+  build all (on UNIX usie./build.sh)
+
+For more documentation please browse to XMLPULL website at http://www.xmlpull.org
+  
+
+
+Building and executing automatic tests
+--------------------------------------
+
+NOTE: those tests are to verify implementation of XMLPULL API V1 and
+they are taken from http://www.xmlpull.org
+
+To execute tests you can use ANT target called "junit" 
+(make sure that JUnit is on CLASSPATH!!!)
+
+  build junit
+	
+and you should see all tests passed successfully, similarly to:
+
+junit:
+     [java] ...............
+     [java] Time: 0.151
+     [java]
+     [java] OK (15 tests)
+     [java]
+
+now you can start using XMLPULL, see provided samples in src/java/samples
+and read documentation at http://www.xmlpull.org
+
+Please report bugs to http://www.extreme.indiana.edu/soap/xpp/
+
+Thanks!
+
+Aleksander Slominski
+

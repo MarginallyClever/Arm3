@@ -26,6 +26,7 @@ public class Camera {
 			if(tilt > 179) tilt= 179;
 		}
 
+		// calculate new vectors for translation based on pan/tilt angles
 		forward.y = (float)Math.sin((-pan-90) * Math.PI/180.0) * (float)Math.cos((90-tilt) * Math.PI/180.0);
 		forward.x = (float)Math.cos((-pan-90) * Math.PI/180.0) * (float)Math.cos((90-tilt) * Math.PI/180.0);
 		forward.z =                                             (float)Math.sin((90-tilt) * Math.PI/180.0);
@@ -35,9 +36,9 @@ public class Camera {
 		Vector3f right = new Vector3f();
 		Vector3f temp = new Vector3f();
 		Vector3f.cross(forward, up, right);
-		Vector3f.cross(forward, right, up);
-		
-		boolean changed=false;
+		Vector3f.cross(right, forward, up);
+
+		// which way do we want to move?
 		if (Keyboard.isKeyDown(Keyboard.KEY_W)) {
 			// forward
 			temp.set(forward);
@@ -65,13 +66,13 @@ public class Camera {
 		if (Keyboard.isKeyDown(Keyboard.KEY_Q)) {
 			// strafe left
 			temp.set(up);
-			temp.scale(0.25f*delta);
+			temp.scale(0.25f*-delta);
 			Vector3f.add(position, temp, position);
 		}
 		if (Keyboard.isKeyDown(Keyboard.KEY_E)) {
 			// strafe right
 			temp.set(up);
-			temp.scale(0.25f*-delta);
+			temp.scale(0.25f*delta);
 			Vector3f.add(position, temp, position);
 		}
 	}

@@ -25,7 +25,7 @@ extends RobotWithSerialConnection {
 	private Vector3f wrist = new Vector3f();
 	private Vector3f elbow = new Vector3f();
 	private Vector3f shoulder = new Vector3f();
-	private Vector3f base = new Vector3f();  // relative to world
+	public Vector3f base = new Vector3f();  // relative to world
 
 	// angle of rotation
 	float angle_0 = 0;

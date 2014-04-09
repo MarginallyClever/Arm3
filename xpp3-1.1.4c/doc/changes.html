@@ -1,0 +1,371 @@
+<html>
+<head>
+<title>MXP1/XPP3 Changes
+</title>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="author" content="Aleksander Slominski [http://www.extreme.indiana.edu/~aslom]">
+</head>
+<body bgcolor="white">
+
+<H1>Changes to XPP3</H1><P>
+
+<h3>2006</h3>
+<ul><li>
+
+<p>2006-11-03 (XPP3_1_1_4b): updated SAX2 driver addon with a bug fix
+<br/>
+<b>backward incompatible change</b>: XmlElement will not accept null children
+(null can not be passed to addChild/addElement)
+</p>
+</li><li>
+
+<p>2006-10-23 (XPP3_1_1_4): fixed
+fixed  <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=201">Bug 201:
+NullPointerException in MXParserCachingStrings</a>
+- calling defineEntityReplacementText now works before calling setInput
+</p>
+</li><li>
+
+<p>2006-10-22 (XPP3_1_1_4): fixed
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=245">Bug 245:
+Serializer may write endTag unmatching startTag</a>
+</p>
+</li><li>
+<p>2006-10-22: fixed
+XmlPull SAX2 driver not sending correct qname (rawName) in startElement() callback
+</p>
+</li><li>
+<p>2006-10-22: fixed
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=246">Bug 246:
+DOM2XmlPullBuilder not handling default namespaces</a>
+</p>
+</li><li>
+<p>2006-04-30 (XPP3_1_1_3__8): added equals to XmlAttributeImpl
+</p>
+</li></ul>
+
+
+
+<h3>2006-04-25 (XPP3_1_1_3__7)</h3>
+<ul><li>
+<p>Reversed changes made in  <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=135">bug 135:
+	implement DETECT ENCODING feature</a> as
+for some types of input streams (URLConnection ...)
+it is not possible to do more than once new InputStreamReader(inputStream)
+as it somehow detects it and closes underlying input stream (b.....d!)
+</p>
+<p>In future one will need better low level byte-by-byte reading of prolog and then doing InputStream ...
+</p>
+</li></ul>
+
+
+<h3>2006-04-22 (XPP3_1_1_3__6)</h3>
+<ul><li>
+2006-04-22: fixed <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=241">bug 241:
+	incorrect setting of endTag prefix when attribute has a prefix generated</a> and added unit tests for it
+</li><li>
+	Towards fully resolving <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=135">bug 135:
+	implement DETECT ENCODING feature</a>
+	the parser will now attempt to read input stream with declared encoding if no encoding
+	was passed in setInput()
+</li></ul>
+
+<h3>2004-04</h3>
+
+<ul>
+	<li>
+	<p>TODO: as part of XB1 adaptation to JDK 1.5 it is now using
+	Iterable/SimpleIteraor (local stubs) instead of Iterator</p>
+	</li>
+
+	<li>
+	<p>XB1: API generally can take now QName in places where (XmlNamespace,
+	prefix) is used</p>
+	</li>
+
+	<li>2005-08-11 (1.1.3.4.0, CVS TAG: XPP3_1_1_3_4_O): fixed
+	<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=228">Bug 228
+	  	overflow error in MXParser buffer sizing</a>
+	</li>
+
+
+	<li>2004-10-22 (1.1.3.4.M): fixed&nbsp; lookupNamespaceByName /
+	lookupNamespaceByPrefix to work in XmlElementAdapter</li>
+	<li>2004-09-30 (1.1.3.4.K):
+	performance improvement to fix
+	<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=214">
+
+	Bug 214: MXParser.parseEpilog throws/catches EOFException, making it very slow
+	</a></li>
+
+	<li>2004-09-30: misc. fixes to XPath support (default factory, exception handling)
+	</li>
+
+	<li>2004-09-30: XB1 API improvements: added XmlElementAdapter,
+	attributes can implement XmlSerializable to provide custom XML serialization,
+	XmlAttribute now implements Cloneable,
+	fixed (hopefully) XmlElement.castOrWrap behavior for very complex chains,
+	added XmlElement.replaceChildrenWithText(String textContent)
+	</li>
+
+	<li>
+	2004-09-02 (CVS TAG: XPP3_1_1_3_4_I): fixed bug in addElement (did not set parent)</li>
+	<li>
+	2004-08-19: fixed
+	<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=202">Bug
+	202 ArrayStoreException when defining entity replacements</a> reported by
+	Benjamin Amodio using suggested patch (thanks!)</li>
+	<li>
+	2004-6-16 (1.1.3.4.G): added XPath support based on code Jaxen.org,
+	a separate xpp3_xpath_VERSION.jar is built and if added to CLASSPATH
+	then XPath support in XB1 is available
+	</li>
+
+	<li>
+	2004-6-16 (1.1.3.4.G): changed XB1 parse method to handle more efficiently adding
+	thousands of children (like big arrays) avoiding N^2 in the worst case
+	(addElement was doing lookup of parent children to check if added element was added ...)
+	</li>
+
+	<li>
+	2004-5-15 (1.1.3.4.D): added XmlInfosetBuilder.newInstance(factory) to allow creation
+	of XB1 builder without using default System.getProperty() which
+	is no possible in applets
+	</li>
+
+	<li>
+	2004-5-12: fixed bug in XmlElementImpl.element(int position)</li>
+	<li>
+	2004-4-16: XB1 improved serialization especially handling of XmlCharacter
+	</li>
+
+	<li>
+	<p>2004-4-15: added interface <b>XmlContained</b> as an abstraction for XML
+	Infoset items that are contained inside other items</p>
+	</li>
+	<li>
+	<p>2004-4-15: <b>backward incompatible change</b>: XmlCharacters is now
+	XmlContained and getParent() returns XmlContainer instead of XmlElement
+	(JDK15 can use covariant return types but not JDK 1.4 ...)</p>
+	</li>
+
+</ul>
+<h3>2004-02 (XPP3_1_1_3_4)</h3><a name="XPP3_1_1_3_4"></a>
+
+<ul>
+<li>TODO allow option to ask serializer to escape chars &gt; 127</li>
+<li>TODO: XB1 location info with mini XPath locator ...</li>
+
+<li>2004-3-4: improved support for XML element wrapping:
+use FooAdapter foo2 = (FooAdapter) XmlElementAdapter.castOrWrap(barAdapter, FooAdapter.class);
+instead of new FooAdapter(barAdapter) to avoid duplicate wrappings
+</li>
+
+<li>2004-2-22: <b>backward incompatible change</b>: to reflect better API intent
+<b>XmlPullBuilder</b> was renamed to <b>XmlInfosetBuilder</b></li>
+
+<li>2004-2-13: added cloning support to standard XPP3 standard parser (not minimum JAR file!)
+</li>
+
+<li>2004-2-13: added cloning support to XmlDocument and XmlElement
+</li>
+
+<li>2004-2-7: removed use of SimpleIterator replaced with standard java.util.Iterator
+	(this is consistent with JDK 1.5 change)
+</li>
+
+<li>2004-2-7: synced up with the latest XmlPull API and unit tests
+</li>
+
+<li>2004-01-22: XB1: added elements() and attribute() XPath like locators to
+XmlElement</li>
+
+<li>2004-01-21: allow to call XmlSerializer.flush() after serialization is
+finished and modified XmlPullBuilder to call it for serialize(*, ser)</li>
+<li>2004-01-21: XB1: fixed bug that too many XB1 elements extended XmlContainer</li>
+<li>2004-01-21: XB1:added getRoot() to XmlElement to find the topmost element
+container</li>
+<li>2004-01-21: XB1: rewritten serialization of XmlElement to not print
+namespace xmlns declaration when it is not needed ...</li>
+<li>2004-01-20: XB1: <b>semantics change</b> - addChild no longer checks if
+child is XmlElement and does not fix parent only addElement does calls
+setParent()!!!</li>
+<li>2004-01-20: XB1: addition of element(namespace, name, [create]) method to
+facilitate XPath like traversal and path creation (when create = true)!</li>
+<li>2004-01-20: serializer: fix CR, LF, TAB and chars &lt;32 in attribute value escaping</li>
+<li>2004-01-20: added support for
+<a href="http://xmlpull.org/v1/doc/properties.html#location">
+http://xmlpull.org/v1/doc/properties.html#location</a> </li>
+<li>2004-01-20: serializer will escape chars &lt; 32 expect for TAB (9) and NL (10)
+that are passed unchanged</li>
+
+<li>added to build.xml <code>target="1.1"</code> for parser/serializer related targets
+to make sure that compiled code can work with JDK 1.1
+(as described in <a href="http://ant.apache.org/manual/CoreTasks/javac.html">ANT Javac Task documentation</a>: (...)
+Generate class files for specific VM version (e.g., 1.1 or 1.2).
+Note that the default value depends on the JVM that is running Ant.
+In particular, if you use JDK 1.4 the generated classes <b>will not be usable for a 1.1 Java VM unless</b>
+you explicitly set this attribute to the value 1.1 (which is the default value for JDK 1.1 to 1.3).
+</li>
+<li>XB1: fixed problem with no respecting element prefix when serializing - it
+works but there is some improvement possible when XmlSerializer is fixed see
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=169">issue
+report (bug 169)</a> for details</li>
+<li>XB1: added to XmlElement methods requiredElementContent() and
+requiredTextContent() to simplify SOAP like processing</li>
+<li>XB1: modified XmlSerializable to throw IOException</li>
+<li>added getWriter() to MXSerializer so it can be accessed by casting
+XmlSerializer (if somebody <b>really</b> needs it)</li>
+<li>RC5 fixed
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=160">bug 160</a>:
+text() should make sure to escape &quot;]]&gt;&quot;</li>
+<li>allow user to decide what kind of quotation is used in document prolog &lt;?xml
+by checking value of
+<a href="http://xmlpull.org/v1/doc/features.html#serializer-attvalue-use-apostrophe">
+FEATURE_SERIALIZER_ATTVALUE_USE_APOSTROPHE</a></li>
+<li>RC3 fixed <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=148">bug 148</a>:
+two bugs in CDSECT handling: not marking it as PCDATA and incorrect normalization
+</li>
+<li>RC2 fixed <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=147">bug 147</a>:
+bug with parsing entity reference if it is sole element content
+</li>
+<li>RC1 fixed <a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=146">bug 146</a>:
+   	bug in CDATA parsing (]] &lt;)
+</li>
+<li>extended XB1 builder to allow serializing Collections as containers for children</li>
+<li>added DOM2 builder add-on from XmlPull add-ons</li>
+<li>changed XmlElement lookupNamespace to check  parent  for namespace declarations
+</li>
+<li>more strict checking that namespace name passed to XmlSerializer.getPrefix()
+is not null and not empty
+</li>
+</ul>
+
+<h3>2003-07-01 (XPP3_1_1_3_3)</h3><a name="XPP3_1_1_3_3"></a>
+
+
+<ul>
+
+<li>improved error diagnostics in exception
+
+especially greatly improved in case
+when start tag is not closed (possibly lot of lines later ...)
+(described in
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=128">Bug 128</a>
+except for XB1 XPath locations)</li>
+
+<li>fixed
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=134">[Bug 134]
+Comment handling: greater than eaten inside comments</a>:
+parseComment() (and parsePI()) was incorrectly not copying
+normalized chars from input buffer to buffer with normalized content for &gt;,
+this was happening only when EOL normalization was triggered by \r\n ...
+(reported by Jean-Paul Finne)
+</li>
+
+</ul>
+
+<h3>2003-03-09 (XPP3_1_1_2a)</h3><a name="XPP3_1_1_2a"></a>
+
+<ul>
+<li>fixed bug in MXParser that make it report comment/PI as
+element content from next() if comment or PI was directly after start tag
+(reported by Henry Minsky)
+<li>implemented optional formatting properties for XmlSerializer to
+allow pretty printing of XML output
+(indent, new lines, quotation character used for attribute values)
+for details see
+<a href="http://www.extreme.indiana.edu/bugzilla/show_bug.cgi?id=50">RFE (bug
+50)</a>
+<li>fixed bug in MXParser.processPI that prevented it from
+properly reporting processing instruction that had just target,
+example <code>&lt;?target?></code>
+<li>updated XmlPullWrapper to have methods to extract PI target and data
+and added Junit tests
+</ul>
+
+
+<h3>2002-10-06 (XPP3_1_1_2)</h3><a name="XPP3_1_1_2"></a>
+<ul>
+<li>fixed ROUNDTRIP bug reported by Pace Jim that made MXP1 to report instead of
+start tag (getText()) just attribute value when value contained entity reference
+(and PC was generated)<li>rewritten CDATA handling to do normalization when combined as TEXT by next()
+<li>fixed bug in nextImpl() that kept pointer to pos with using
+bufAbsoluteOffset resulting in corruption of output (reported by M?ns af
+Klercker)</ul>
+
+<h3>2002-08-27 (XPP3_1_1_1)</h3><a name="XPP3_1_1_1"></a>
+<ul>
+<li>implements XmlPull API 1.1.1 <b>including</b> XmlSerializer, updated samples
+and tests (including tests described in XML)
+<li>better diagnostic messages
+<li>fixed bug in CDSECT parsing that ignored CDATA content if CDEXT was directly after tag ...
+<li>fixed bug with character entities that were using hex digits.
+</ul>
+
+<h3>2002-04-24 (XPP3_1_0_8a)</h3>
+<ul>
+<li>fixed bug with parsing attribute value if &amp; is first character
+</ul>
+
+<h3>2002-04-24 (XPP3_1_0_8)</h3>
+<ul>
+<li>mainly support for correct depth of END_TAG - the same as START_TAG<li>MXP1
+is now fully integrated with XPP3 for better or worse ...</ul>
+
+<h3>2002-04-23 (XPP3_MXP1_BETA3)</h3>
+<ul>
+<li>internal release only: tracking progress of XMLPULL API changes</ul>
+
+<h3>2002-04-21 (XPP3_MXP1_BETA2)</h3>
+<ul>
+<li>fixed bug in namespace handling for empty elements
+(did not unwind namespace stack) reported by Toivo Lainevool
+</ul>
+
+<h3>2002-04-16 (XPP3_MXP1_BETA1)</h3>
+<ul>
+<li>this release contains a brand new redesigned for performance XML parsing
+engine called MXP1, for more details visit MXP1 website
+<a href="http://www.extreme.indiana.edu/xgws/xsoap/xpp/mxp1/">
+http://www.extreme.indiana.edu/xgws/xsoap/xpp/mxp1/</a>
+</ul>
+
+
+<h3>2002-04-07 (XPP3_1_0_7_1)</h3>
+<ul>
+<li>reorganized build structure to include XMLPULL API, samples, and tests
+source to make it easier for users to build and use XPP3; jar file will include
+now XMLPULL API as well<li>removed Xpp3Factory and now parser class i directly
+created by XmlPullParserFactory<li>updated to
+<a href="http://www.xmlpull.org/v1/doc/changes.html#XMLPULL_1_0_7_1">XMLPULL API
+version 1.0.7.1</a></ul>
+
+
+<h3>2002-04-07 (XPP3_1_0_7)</h3>
+<ul>
+<li>updated to
+<a href="http://www.xmlpull.org/v1/doc/changes.html#XMLPULL_1_0_7">XMLPULL API
+version 1.0.7</a></ul>
+
+
+<h3>2002-04-06 (XPP3_1_0_6)</h3>
+<ul>
+<li>updated to XMLPULL API version 1.0.6</ul>
+
+
+<h3>2002-03-30 (XPP3_1_0_5)</h3>
+<ul>
+<li>first official release (passes all XMLPULL 1.0.5 API TESTS)</ul>
+
+
+<h3>2002-03-25</h3>
+<ul>
+<li>internal release</ul>
+
+
+<hr/>
+<address><a href="http://www.extreme.indiana.edu/~aslom/">Aleksander Slominski</a><address>
+</address>
+</body>
+</html>

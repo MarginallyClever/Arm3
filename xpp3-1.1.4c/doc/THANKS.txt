@@ -1,0 +1,9 @@
+* Stefan Haustein
+        for getting me motivated to do yet another major release of XPP ...
+* Toivo Lainevool
+        for finding bug in namespace handling for empty elements
+* Mans af Klercker
+	finding and reporting really nasty bu in nextImpl() and lacking use 
+	of bufAbsoluteOffset resulting in corruption of PC buffer 
+	when reading buf[] after more()/fillBuf() ...
+	

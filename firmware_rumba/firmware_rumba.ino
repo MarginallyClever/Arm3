@@ -12,7 +12,7 @@
 //#define VERBOSE              (1)  // add to get a lot more serial output.
 //#define DEBUG                (1)  // add to get a lot more serial output.
 
-#define VERSION              (3)  // firmware version
+#define EEPROM_VERSION       (3)  // firmware version
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 #define MIN_STEP_DELAY       (1)
@@ -36,6 +36,10 @@
 #define FINGER_TO_FLOOR      (0.5)
 
 #define TWOPI                (PI*2)
+
+#define ADDR_VERSION         (0)
+#define ADDR_UUID            (4)
+
 
 //*
 //#define HOME_X               (13.3)
@@ -481,16 +485,29 @@ void where() {
 } 
 
 
+long GetGUID() {
+  return EEPROM_readLong(ADDR_UUID);
+}
+
+
+void SetGUID(long newid) {
+  EEPROM_writeLong(ADDR_UUID,newid);
+}
+
+
 /**
  * display helpful information
  */
 void help() {
-  Serial.print(F("Arm3-v1 "));
-  Serial.println(VERSION);
+  Serial.print(F("Arm3:"));
+  Serial.print(EEPROM_GetGUID());
+  Serial.print(':');
+  Serial.println(EEPROM_GetVersion());
   Serial.println(F("Commands:"));
   Serial.println(F("M18; - disable motors"));
   Serial.println(F("M100; - this help message"));
   Serial.println(F("M114; - report position and feedrate"));
+  Serial.println(F("M1000; - set GUID"));
   Serial.println(F("F, G00, G01, G04, G17, G18, G28, G54-G59, G90-G92, M06 as described by http://en.wikipedia.org/wiki/G-code"));
 }
 
@@ -556,12 +573,13 @@ void processCommand() {
   case 18:  motor_disable();  break;
   case 100:  help();  break;
   case 114:  where();  break;
-  case 1000:  
+  case 1000:  EEPROM_SetGUID(parsenumber('U',0));  break;
   case 1001:  
   case 1002:  
   case 1003:  
   case 1004:  
-  case 1005:  {
+  case 1005:  
+  case 1006:  {
     int id=cmd-1000;
     int dir=parsenumber('D',1)==1?1:-1;
     for(int i=0;i<STEPS_PER_TURN;i++) {
@@ -595,6 +613,8 @@ void tools_setup() {
  * First thing this machine does on startup.  Runs only once.
  */
 void setup() {
+  EEPROM_Setup();
+  
   Serial.begin(BAUD);  // open coms
 
   motor_setup();

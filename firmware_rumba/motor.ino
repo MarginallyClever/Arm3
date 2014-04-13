@@ -115,20 +115,38 @@ void motor_disable() {
 
 
 void find_home() {
+  // hit switch
   while(digitalRead(motors[1].limit_switch_pin)==HIGH) {
     motor_onestep(1,1);
+    pause(500);
+  }
+  // Back off switch
+  while(digitalRead(motors[1].limit_switch_pin)==LOW) {
+    motor_onestep(1,-1);
     delay(1);
   }
   Serial.println(F("Found 1"));
   
+  // hit switch
   while(digitalRead(motors[0].limit_switch_pin)==HIGH) {
     motor_onestep(0,-1);
+    pause(500);
+  }
+  // Back off switch
+  while(digitalRead(motors[0].limit_switch_pin)==LOW) {
+    motor_onestep(0,1);
     delay(1);
   }
   Serial.println(F("Found 0"));
 
+  // hit switch
   while(digitalRead(motors[2].limit_switch_pin)==HIGH) {
     motor_onestep(2,-1);
+    pause(500);
+  }
+  // Back off switch
+  while(digitalRead(motors[2].limit_switch_pin)==LOW) {
+    motor_onestep(2,1);
     delay(1);
   }
   Serial.println(F("Found 2"));

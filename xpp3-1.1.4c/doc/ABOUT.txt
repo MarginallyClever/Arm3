@@ -1,4 +1,0 @@
-XML Pull Parser 3 (XPP3)
-
-for more information please see:
-http://www.extreme.indiana.edu/xpp/

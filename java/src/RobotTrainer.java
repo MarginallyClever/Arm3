@@ -205,7 +205,7 @@ implements ActionListener, GLEventListener
           gl2.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
         }
         
-    	world.render( gl2, dt );
+        world.render( gl2, dt );
     }
 	
     

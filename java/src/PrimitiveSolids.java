@@ -3,9 +3,84 @@ import javax.media.opengl.GL2;
 
 
 public class PrimitiveSolids {
-	static void drawCylinder(GL2 gl2,float thickness,float diameter) {
-		//thickness/=2;
-		float radius=diameter;///2;
+	static void drawCylinder(GL2 gl2,Cylinder tube) {
+		/*
+		gl2.glBegin(GL2.GL_LINES);
+		gl2.glVertex3f(tube.GetP1().x, tube.GetP1().y, tube.GetP1().z);
+		gl2.glVertex3f(tube.GetP2().x, tube.GetP2().y, tube.GetP2().z);
+		gl2.glEnd();
+		*/
+
+		Vector3f tx = new Vector3f();
+		Vector3f ty = new Vector3f();
+		Vector3f t1 = new Vector3f();
+		Vector3f t2 = new Vector3f();
+		Vector3f n = new Vector3f();
+		
+		int i;
+		int c=10;
+		
+		// left
+		gl2.glBegin(GL2.GL_TRIANGLE_FAN);
+		gl2.glNormal3f(-tube.GetN().x,-tube.GetN().y,-tube.GetN().z);
+		for(i=0;i<=c;++i) {
+			tx.set(tube.GetR());
+			ty.set(tube.GetF());
+
+			float ratio= (float)Math.PI * 2.0f * (float)i/(float)c;
+			tx.scale((float)Math.sin(ratio)*tube.radius);
+			ty.scale((float)Math.cos(ratio)*tube.radius);
+			t1.set(tube.GetP1());
+			t1.add(tx);
+			t1.add(ty);
+			gl2.glVertex3f(t1.x,t1.y,t1.z);
+		}
+		gl2.glEnd();
+		// right
+		gl2.glBegin(GL2.GL_TRIANGLE_FAN);
+		gl2.glNormal3f(tube.GetN().x,tube.GetN().y,tube.GetN().z);
+		for(i=0;i<=c;++i) {
+			tx.set(tube.GetR());
+			ty.set(tube.GetF());
+
+			float ratio= (float)Math.PI * 2.0f * (float)i/(float)c;
+			tx.scale((float)Math.sin(ratio)*tube.radius);
+			ty.scale((float)Math.cos(ratio)*tube.radius);
+			t1.set(tube.GetP2());
+			t1.add(tx);
+			t1.add(ty);
+			gl2.glVertex3f(t1.x,t1.y,t1.z);
+		}
+		gl2.glEnd();
+
+		// edge
+		gl2.glBegin(GL2.GL_TRIANGLE_STRIP);
+		for(i=0;i<=c;++i) {
+			tx.set(tube.GetR());
+			ty.set(tube.GetF());
+
+			float ratio= (float)Math.PI * 2.0f * (float)i/(float)c;
+			tx.scale((float)Math.sin(ratio)*tube.radius);
+			ty.scale((float)Math.cos(ratio)*tube.radius);
+			t1.set(tube.GetP1());
+			t1.add(tx);
+			t1.add(ty);
+			
+			t2.set(tx);
+			t2.add(ty);
+			n.set(t2);
+			n.normalize();
+			gl2.glNormal3f(n.x,n.y,n.z);
+			t2.add(tube.GetP2());
+			gl2.glVertex3f(t1.x,t1.y,t1.z);
+			gl2.glVertex3f(t2.x,t2.y,t2.z);
+			
+		}
+		gl2.glEnd();
+	}
+
+	// TODO: move this to Cylinder?
+	static void drawCylinder(GL2 gl2,float thickness,float radius) {
 		int i;
 		int c=36;
 		
@@ -114,5 +189,42 @@ public class PrimitiveSolids {
 		gl2.glVertex3f(0, 0, size);
 		gl2.glEnd();
 		gl2.glPopMatrix();
+	}
+
+	
+	static public void drawGrid(GL2 gl2,int grid_size,int grid_space) {
+		gl2.glColor3f(0.2f,0.2f,0.2f);
+		gl2.glNormal3f(0,0,1);
+	
+		gl2.glBegin(GL2.GL_LINES);
+		for(int i=-grid_size;i<=grid_size;i+=grid_space) {
+			for(int j=-grid_size;j<=grid_size;j+=grid_space) {
+				gl2.glVertex3f(i,-grid_size,0);
+				gl2.glVertex3f(i,grid_size,0);					
+				gl2.glVertex3f(-grid_size,j,0);
+				gl2.glVertex3f(grid_size,j,0);					
+			}
+		}
+		gl2.glEnd();
+	
+		gl2.glBegin(GL2.GL_LINES);
+		
+		// +X line
+		gl2.glColor3f(0.5f,0,0);
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(grid_size*2,0,0);
+		// +Y line
+		gl2.glColor3f(0,0.5f,0);
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(0,grid_size*2,0);
+		// +Z line
+		gl2.glColor3f(0,0,0.5f);
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(0,0,grid_size*2);
+	
+		gl2.glEnd();
+	}
+	static public void drawGrid(GL2 gl2) {
+		drawGrid(gl2,50,1);
 	}
 }

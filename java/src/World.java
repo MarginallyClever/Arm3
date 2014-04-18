@@ -7,9 +7,10 @@ import com.jogamp.newt.event.KeyEvent;
 import javax.media.opengl.GL2;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.vecmath.Vector3f;
 
 
-public class World 
+public class World
 implements ActionListener {
 	/* menus */
 	JMenuItem buttonRescan, buttonDisconnect;
@@ -18,60 +19,24 @@ implements ActionListener {
 	Camera camera = new Camera();
 	Arm3Robot robot0 = new Arm3Robot("0");
 	Arm3Robot robot1 = new Arm3Robot("1");
+	
 	final int NUM_ROBOTS = 2;
-	int activeRobot=0;
+	protected int activeRobot=0;
 
 	
 	public World() {
-		robot1.base.x=50;
+		robot1.MoveBase(new Vector3f(50f,0f,0f));
+		robot1.RotateBase(180f,0f);
+		robot1.FinalizeMove();
 	}
 	
-	
+
     protected void setup( GL2 gl2 ) {
 		gl2.glDepthFunc(GL2.GL_LESS);
 		gl2.glEnable(GL2.GL_DEPTH_TEST);
 		gl2.glDepthMask(true);
     }
     
-
-    protected void render( GL2 gl2, float dt ) {
-		//gl2.glEnable(GL2.GL_CULL_FACE);
-		
-		
-		gl2.glPushMatrix();
-			camera.render(gl2);
-
-			gl2.glDisable(GL2.GL_LIGHTING);
-			drawGrid(gl2);
-			 // Enable lighting
-			gl2.glEnable(GL2.GL_LIGHTING);
-			gl2.glEnable(GL2.GL_LIGHT0);
-			gl2.glEnable(GL2.GL_COLOR_MATERIAL);
-			/*
-			FloatBuffer position = ByteBuffer.allocateDirect(16).asFloatBuffer();
-		    position.mark();
-		    position.put(new float[] { -10f, 10f, 50f, 0f }); // even values about 10e3 for the first three parameters aren't changing anything
-		    position.reset();
-			gl2.glLight(GL2.GL_LIGHT0, GL2.GL_POSITION, position);
-
-		    FloatBuffer ambient = ByteBuffer.allocateDirect(16).asFloatBuffer();
-		    ambient.mark();
-		    ambient.put(new float[] { 0.85f, 0.85f, 0.85f, 1f });
-		    ambient.reset();
-		    gl2.glLight(GL2.GL_LIGHT0, GL2.GL_AMBIENT, ambient);
-
-		    FloatBuffer diffuse = ByteBuffer.allocateDirect(16).asFloatBuffer();
-		    diffuse.mark();
-		    diffuse.put(new float[] { 1.0f, 1.0f, 1.0f, 1f });
-		    diffuse.reset();
-		    gl2.glLight(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse);
-*/
-			robot0.render(gl2,dt);
-			robot1.render(gl2,dt);
-			
-		gl2.glPopMatrix();
-    }
-
 
     public void mouseClicked(MouseEvent e) {
     	
@@ -166,47 +131,65 @@ implements ActionListener {
         
         return menu;
     }
-
-	protected void drawGrid(GL2 gl2) {
-		final int grid_size=50;
-		final int grid_space=1;
-		gl2.glColor3f(0.2f,0.2f,0.2f);
-		gl2.glNormal3f(0,0,1);
 	
-		gl2.glBegin(GL2.GL_LINES);
-		for(int i=-grid_size;i<=grid_size;i+=grid_space) {
-			for(int j=-grid_size;j<=grid_size;j+=grid_space) {
-				gl2.glVertex3f(i,-grid_size,0);
-				gl2.glVertex3f(i,grid_size,0);					
-				gl2.glVertex3f(-grid_size,j,0);
-				gl2.glVertex3f(grid_size,j,0);					
+	public void render(GL2 gl2, float dt ) {
+		//gl2.glEnable(GL2.GL_CULL_FACE);
+		
+		gl2.glPushMatrix();
+			camera.render(gl2);
+
+			gl2.glDisable(GL2.GL_LIGHTING);
+			PrimitiveSolids.drawGrid(gl2);
+			 // Enable lighting
+			gl2.glEnable(GL2.GL_LIGHTING);
+			gl2.glEnable(GL2.GL_LIGHT0);
+			gl2.glEnable(GL2.GL_COLOR_MATERIAL);
+			/*
+			FloatBuffer position = ByteBuffer.allocateDirect(16).asFloatBuffer();
+		    position.mark();
+		    position.put(new float[] { -10f, 10f, 50f, 0f }); // even values about 10e3 for the first three parameters aren't changing anything
+		    position.reset();
+			gl2.glLight(GL2.GL_LIGHT0, GL2.GL_POSITION, position);
+
+		    FloatBuffer ambient = ByteBuffer.allocateDirect(16).asFloatBuffer();
+		    ambient.mark();
+		    ambient.put(new float[] { 0.85f, 0.85f, 0.85f, 1f });
+		    ambient.reset();
+		    gl2.glLight(GL2.GL_LIGHT0, GL2.GL_AMBIENT, ambient);
+
+		    FloatBuffer diffuse = ByteBuffer.allocateDirect(16).asFloatBuffer();
+		    diffuse.mark();
+		    diffuse.put(new float[] { 1.0f, 1.0f, 1.0f, 1f });
+		    diffuse.reset();
+		    gl2.glLight(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse);
+*/
+			robot0.PrepareMove(dt);
+			robot1.PrepareMove(dt);
+			if(WillCollide(robot0,robot1) == false) {
+				robot0.FinalizeMove();
+				robot1.FinalizeMove();
+			}
+			
+			robot0.render(gl2);
+			robot1.render(gl2);
+			
+		gl2.glPopMatrix();
+	}
+
+	boolean WillCollide(Arm3Robot a,Arm3Robot b) {
+		// TODO complete me
+		//Get the cylinders for each robot
+		BoundingVolume [] from = a.GetBoundingVolumes();
+		BoundingVolume [] to = b.GetBoundingVolumes();
+		// test cylinder/cylinder intersection
+		for(int i=0;i<from.length;++i) {
+			for(int j=0;j<to.length;++j) {
+				if(IntersectionTester.CylinderCylinder((Cylinder)from[i],(Cylinder)to[i])) {
+					return true;
+				}
 			}
 		}
-		gl2.glEnd();
-	//*/
-		/*
-		gl2.glBegin(GL2.GL_QUADS);
-		gl2.glVertex3f(grid_size,-grid_size,0);
-		gl2.glVertex3f(-grid_size,-grid_size,0);					
-		gl2.glVertex3f(-grid_size,grid_size,0);
-		gl2.glVertex3f(grid_size,grid_size,0);					
-		gl2.glEnd();*/
-	
-		gl2.glBegin(GL2.GL_LINES);
-		
-		// +X line
-		gl2.glColor3f(0.5f,0,0);
-		gl2.glVertex3f(0,0,0);
-		gl2.glVertex3f(grid_size*2,0,0);
-		// +Y line
-		gl2.glColor3f(0,0.5f,0);
-		gl2.glVertex3f(0,0,0);
-		gl2.glVertex3f(0,grid_size*2,0);
-		// +Z line
-		gl2.glColor3f(0,0,0.5f);
-		gl2.glVertex3f(0,0,0);
-		gl2.glVertex3f(0,0,grid_size*2);
-	
-		gl2.glEnd();
+		// if there is any hit, return true.
+		return false;
 	}
 }

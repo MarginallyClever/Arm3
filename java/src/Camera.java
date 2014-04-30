@@ -102,7 +102,7 @@ public class Camera {
 		// move the camera
 		Vector3f temp = new Vector3f();
 		Vector3f direction = new Vector3f(0,0,0);
-		float vel = 0.5f;
+		float vel = 0.75f;
 		boolean changed = false;
 		
 		// which way do we want to move?

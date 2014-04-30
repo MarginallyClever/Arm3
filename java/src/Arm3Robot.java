@@ -65,6 +65,7 @@ extends RobotWithSerialConnection {
 	
 	protected MotionState motion_now = new MotionState();
 	protected MotionState motion_future = new MotionState();
+	
 	boolean homed = false;
 	boolean homing = false;
 	boolean follow_mode = false;
@@ -83,13 +84,10 @@ extends RobotWithSerialConnection {
 	boolean kDown=false;
 	boolean oDown=false;
 	boolean lDown=false;
-/*
-	public float getAngle0() {  return motion_now.angle_0;  }
-	public float getAngle1() {  return motion_now.angle_1;  }
-	public float getAngle2() {  return motion_now.angle_2;  }
-	*/
+	
 	
 	public Vector3f getHome() {  return new Vector3f(HOME_X,HOME_Y,HOME_Z);  }
+	
 	public void setHome(Vector3f newhome) {
 		HOME_X=newhome.x;
 		HOME_Y=newhome.y;
@@ -426,7 +424,7 @@ extends RobotWithSerialConnection {
 		motion_now.set(motion_future);
 		
 		if(arm_moved) {
-			if(homed && follow_mode) {
+			if(homed && follow_mode && this.ReadyForCommands() ) {
 				arm_moved=false;
 				this.DeleteAllQueuedCommands();
 				this.SendCommand("G0 X"+motion_now.finger_tip.x+" Y"+motion_now.finger_tip.y+" Z"+motion_now.finger_tip.z);
@@ -436,9 +434,7 @@ extends RobotWithSerialConnection {
 	
 	
 	public void render(GL2 gl2) {
-		// these two should always match!
 		gl2.glPushMatrix();
-		
 /*
 		gl2.glTranslatef(motion_now.base.x, motion_now.base.y, motion_now.base.z);
 		gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
@@ -451,8 +447,11 @@ extends RobotWithSerialConnection {
 		gl2.glEnable(GL2.GL_LIGHTING);
 */
 		//drawBounds(gl2);
+		
+		// these two should always match!
 		drawFK(gl2);
 		//drawIK(gl2);
+		
 		gl2.glPopMatrix();
 	}
 	

@@ -9,23 +9,16 @@
 //------------------------------------------------------------------------------
 // CONSTANTS
 //------------------------------------------------------------------------------
-//#define VERBOSE              (1)  // add to get a lot more serial output.
-//#define DEBUG                (1)  // add to get a lot more serial output.
+#define VERBOSE              (0)  // increase this number to get more output
 
-#define EEPROM_VERSION       (3)  // firmware version
+// serial comms
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
+
+// speeds
 #define MIN_STEP_DELAY       (1)
 #define MAX_FEEDRATE         (1000000/MIN_STEP_DELAY)
 #define MIN_FEEDRATE         (0.01)
-#define NUM_AXIES            (3)
-#define CM_PER_SEGMENT       (1)
-#define DEFAULT_FEEDRATE     (900)
-
-#define STEP_MICROSTEPPING   (16.0)  // microstepping
-#define MOTOR_STEPS_PER_TURN (400.0)
-#define GEAR_RATIO           (5.0)
-#define STEPS_PER_TURN       (MOTOR_STEPS_PER_TURN * STEP_MICROSTEPPING * GEAR_RATIO)
 
 // machine dimensions
 #define BASE_TO_SHOULDER_X   (5.37)  // measured in solidworks
@@ -34,13 +27,42 @@
 #define ELBOW_TO_WRIST       (25.0)
 #define WRIST_TO_FINGER      (4.0)
 #define FINGER_TO_FLOOR      (0.5)
+#define NUM_AXIES            (6)
+#define STEP_MICROSTEPPING   (16.0)  // microstepping
+#define MOTOR_STEPS_PER_TURN (400.0)
+#define GEAR_RATIO           (5.0)
+#define STEPS_PER_TURN       (MOTOR_STEPS_PER_TURN * STEP_MICROSTEPPING * GEAR_RATIO)
 
+// arduino pins for motor control
+#define MOTOR_0_DIR_PIN  (16)
+#define MOTOR_0_STEP_PIN (17)
+#define MOTOR_1_DIR_PIN  (47)
+#define MOTOR_1_STEP_PIN (54)
+#define MOTOR_2_DIR_PIN  (56)
+#define MOTOR_2_STEP_PIN (57)
+#define MOTOR_3_DIR_PIN  (22)
+#define MOTOR_3_STEP_PIN (23)
+#define MOTOR_4_DIR_PIN  (25)
+#define MOTOR_4_STEP_PIN (26)
+#define MOTOR_5_DIR_PIN  (28)
+#define MOTOR_5_STEP_PIN (29)
+
+
+// split long lines into pieces to make them more correct.
+#define CM_PER_SEGMENT       (1)
+#define DEFAULT_FEEDRATE     (800)
+
+// math defines
 #define TWOPI                (PI*2)
+#define RAD2DEG              (180.0/PI)
 
+// EEPROM settings
+#define EEPROM_VERSION       (3)  // firmware version
 #define ADDR_VERSION         (0)
 #define ADDR_UUID            (4)
 
 
+// calibration settings
 //*
 //#define HOME_X               (13.3)
 #define HOME_Y               (0)
@@ -57,7 +79,7 @@
 
 #define MAX_TOOLS            (6)
 
-#define RAD2DEG              (180.0/PI)
+
 
 //------------------------------------------------------------------------------
 // INCLUDES
@@ -70,9 +92,7 @@
 //------------------------------------------------------------------------------
 // for line()
 typedef struct {
-  long step_count;
   long delta;
-  long absdelta;
   long over;
   int dir;
 } Axis;
@@ -96,14 +116,21 @@ typedef struct {
 } Segment;
 
 
+
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-Axis a[4];  // for line()
+Axis a[NUM_AXIES];  // for line()
 Axis atemp;  // for line()
+
+
+Motor motors[NUM_AXIES];
+char *motor_names="XYZABC";
+
 
 char buffer[MAX_BUF];  // where we store the message until we get a ';'
 int sofar;  // how much is in the buffer
+
 
 float px, py, pz;  // step count
 float ox, oy, oz;  // reported position
@@ -119,6 +146,7 @@ char mode_abs=1;  // absolute mode?
 
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
+
 
 
 //------------------------------------------------------------------------------
@@ -197,43 +225,43 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   // once we know the elbow position we can find the angle of each joint.
   // each angle can be converted to motor steps.
     
-    // use intersection of circles to find two possible elbow points.
-    // the two circles are the bicep (shoulder-elbow) and the forearm (elbow-wrist)
-    // the distance between circle centers is d  
-    Vector3 arm_plane(x,y,0);
-    arm_plane.Normalize();
+  // use intersection of circles to find two possible elbow points.
+  // the two circles are the bicep (shoulder-elbow) and the forearm (elbow-wrist)
+  // the distance between circle centers is d  
+  Vector3 arm_plane(x,y,0);
+  arm_plane.Normalize();
 
-    // the finger (attachment point for the tool) is a short distance in "front" of the wrist joint
-    Vector3 wrist(x,y,z);
-    wrist -= arm_plane * WRIST_TO_FINGER;
+  // the finger (attachment point for the tool) is a short distance in "front" of the wrist joint
+  Vector3 wrist(x,y,z);
+  wrist -= arm_plane * WRIST_TO_FINGER;
 
-    Vector3 shoulder = arm_plane;
-    shoulder *= BASE_TO_SHOULDER_X;
-    shoulder.z = BASE_TO_SHOULDER_Z;
+  Vector3 shoulder = arm_plane;
+  shoulder *= BASE_TO_SHOULDER_X;
+  shoulder.z = BASE_TO_SHOULDER_Z;
+  
+  Vector3 es = wrist - shoulder;
+  
+  float d = es.Length();
+  
+  //a = (r0r0 - r1r1 + d*d ) / (2 d) 
+  float r1=ELBOW_TO_WRIST;  // circle 1 centers on wrist
+  float r0=SHOULDER_TO_ELBOW;  // circle 0 centers on shoulder
+  if( d > ELBOW_TO_WRIST + SHOULDER_TO_ELBOW ) {
+    // The points are impossibly far apart, no solution can be found.
+    return 1;
+  }
     
-    Vector3 es = wrist - shoulder;
-    
-    float d = es.Length();
-    
-    //a = (r0r0 - r1r1 + d*d ) / (2 d) 
-    float r1=ELBOW_TO_WRIST;  // circle 1 centers on wrist
-    float r0=SHOULDER_TO_ELBOW;  // circle 0 centers on shoulder
-    if( d > ELBOW_TO_WRIST + SHOULDER_TO_ELBOW ) {
-      // The points are impossibly far apart, no solution can be found.
-      return 1;
-    }
-    
-    float a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2.0*d );
-    // find the midpoint
-    Vector3 mid = es * ( a / d ) + shoulder;
-    // with a and r0 we can find h, the distance from midpoint to the intersections.
-    float h=sqrt(r0*r0-a*a);
-    // the distance h on a line orthogonal to n and plane_normal gives us the two intersections.
-    Vector3 n(-arm_plane.y,arm_plane.x,0);
-    Vector3 r = es ^ n;
-    r.Normalize();
-    Vector3 elbow = mid - r * h;
-    //Vector3 elbow = mid + r * h;
+  float a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2.0*d );
+  // find the midpoint
+  Vector3 mid = es * ( a / d ) + shoulder;
+  // with a and r0 we can find h, the distance from midpoint to the intersections.
+  float h=sqrt(r0*r0-a*a);
+  // the distance h on a line orthogonal to n and plane_normal gives us the two intersections.
+  Vector3 n(-arm_plane.y,arm_plane.x,0);
+  Vector3 r = es ^ n;
+  r.Normalize();
+  Vector3 elbow = mid - r * h;
+  //Vector3 elbow = mid + r * h;
     
   // find the shoulder angle using atan3(elbow-shoulder)
   Vector3 temp = elbow - shoulder;
@@ -254,7 +282,7 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
 
   // angles are now in radians
   
-#ifdef VERBOSE
+#if VERBOSE > 2
   Serial.print(x);
   Serial.print("\t");
   Serial.print(y);
@@ -287,36 +315,87 @@ void line(float newx,float newy,float newz) {
   a[1].delta = newy-py;
   a[2].delta = newz-pz;
   
-  long i,j,maxsteps=0;
+  long i,j,steps_total=0;
+  long delta[NUM_AXIES];
+  long over[NUM_AXIES];
 
   for(i=0;i<NUM_AXIES;++i) {
-    a[i].absdelta = abs(a[i].delta);
-    a[i].dir = a[i].delta > 0 ? 1:-1;
-    if( maxsteps < a[i].absdelta ) maxsteps = a[i].absdelta;
-    a[i].over=0;
+    delta[i] = abs(a[i].delta);
+    a[i].dir = ( a[i].delta * motors[i].flip ) > 0 ? LOW : HIGH;
+    if( steps_total < delta[i] ) steps_total = delta[i];
+    over[i]=0;
   }
   
 
-#ifdef VERBOSE
+#if VERBOSE > 1
+  Serial.print("Total steps=");
+  Serial.println(steps_total);
   Serial.println(F("Start >"));
 #endif
 
-  for( i=0; i<maxsteps; ++i ) {
-    for(j=0;j<NUM_AXIES;++j) {
-      a[j].over += a[j].absdelta;
-      if(a[j].over >= maxsteps) {
-        a[j].over -= maxsteps;
-        motor_onestep(j,a[j].dir);
-      }
+  digitalWrite( MOTOR_0_DIR_PIN, a[0].dir );
+  digitalWrite( MOTOR_1_DIR_PIN, a[1].dir );
+  digitalWrite( MOTOR_2_DIR_PIN, a[2].dir );
+  digitalWrite( MOTOR_3_DIR_PIN, a[3].dir );
+  digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
+  digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
+
+  for( i=0; i<steps_total; ++i ) {
+    // M0
+    over[0] += delta[0];
+    if(over[0] >= steps_total) {
+      digitalWrite(MOTOR_0_STEP_PIN,LOW);
+      over[0] -= steps_total;
+      digitalWrite(MOTOR_0_STEP_PIN,HIGH);
     }
+    // M1
+    over[1] += delta[1];
+    if(over[1] >= steps_total) {
+      digitalWrite(MOTOR_1_STEP_PIN,LOW);
+      over[1] -= steps_total;
+      digitalWrite(MOTOR_1_STEP_PIN,HIGH);
+    }
+    // M2
+    over[2] += delta[2];
+    if(over[2] >= steps_total) {
+      digitalWrite(MOTOR_2_STEP_PIN,LOW);
+      over[2] -= steps_total;
+      digitalWrite(MOTOR_2_STEP_PIN,HIGH);
+    }
+    // M3
+    over[3] += delta[3];
+    if(over[3] >= steps_total) {
+      digitalWrite(MOTOR_3_STEP_PIN,LOW);
+      over[3] -= steps_total;
+      digitalWrite(MOTOR_3_STEP_PIN,HIGH);
+    }
+    // M4
+    over[4] += delta[4];
+    if(over[4] >= steps_total) {
+      digitalWrite(MOTOR_4_STEP_PIN,LOW);
+      over[4] -= steps_total;
+      digitalWrite(MOTOR_4_STEP_PIN,HIGH);
+    }
+    // M5
+    over[5] += delta[5];
+    if(over[5] >= steps_total) {
+      digitalWrite(MOTOR_5_STEP_PIN,LOW);
+      over[5] -= steps_total;
+      digitalWrite(MOTOR_5_STEP_PIN,HIGH);
+    }
+    
     pause_efficient();
+    
+#if VERBOSE > 2
+    Serial.println(i);
+#endif
   }
 
   px=newx;
   py=newy;
   pz=newz;
 
-#ifdef VERBOSE
+#if VERBOSE > 1
   Serial.println(F("< Done."));
 #endif
 }
@@ -349,12 +428,12 @@ void line_safe(float x,float y,float z) {
   Serial.print("posz ");  Serial.println(posz);
 */
   float len=sqrt(dx*dx+dy*dy+dz*dz);
-#ifdef DEBUG
+#if VERBOSE > 2
   Serial.print("LEN ");  Serial.println(len);
 #endif
 
   long pieces=floor(len/CM_PER_SEGMENT);
-#ifdef DEBUG
+#if VERBOSE > 2
   Serial.print("pieces ");  Serial.println(pieces);
 #endif
 

@@ -7,7 +7,6 @@ import com.jogamp.newt.event.KeyEvent;
 import javax.media.opengl.GL2;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
-import javax.vecmath.Vector3f;
 
 
 public class World
@@ -18,16 +17,20 @@ implements ActionListener {
 	/* world contents */
 	Camera camera = new Camera();
 	Arm3Robot robot0 = new Arm3Robot("0");
-	Arm3Robot robot1 = new Arm3Robot("1");
+	//Arm3Robot robot1 = new Arm3Robot("1");
 	
 	final int NUM_ROBOTS = 2;
 	protected int activeRobot=0;
 
 	
 	public World() {
-		robot1.MoveBase(new Vector3f(50f,0f,0f));
+		//robot0.MoveBase(new Vector3f(-25f,0f,0f));
+		robot0.FinalizeMove();
+		/*
+		robot1.MoveBase(new Vector3f(25f,0f,0f));
 		robot1.RotateBase(180f,0f);
 		robot1.FinalizeMove();
+		*/
 	}
 	
 
@@ -72,7 +75,7 @@ implements ActionListener {
     	camera.keyPressed(e);
     	switch(activeRobot) {
     	case 0:    	robot0.keyPressed(e); break;
-    	case 1:    	robot1.keyPressed(e); break;
+    	//case 1:    	robot1.keyPressed(e); break;
     	}
     }
     
@@ -80,7 +83,7 @@ implements ActionListener {
     	camera.keyReleased(e);
     	switch(activeRobot) {
     	case 0:    	robot0.keyReleased(e); break;
-    	case 1:    	robot1.keyReleased(e); break;
+    	//case 1:    	robot1.keyReleased(e); break;
     	}
     }
     
@@ -113,11 +116,11 @@ implements ActionListener {
     	subMenu=robot0.getMenu();
         subMenu.setText("Arm 0");
         menu.add(subMenu);
-
+/*
      	subMenu=robot1.getMenu();
         subMenu.setText("Arm 1");
         menu.add(subMenu);
-
+*/
         buttonRescan = new JMenuItem("Rescan Ports",KeyEvent.VK_R);
         buttonRescan.getAccessibleContext().setAccessibleDescription("Rescan the available ports.");
         buttonRescan.addActionListener(this);
@@ -164,14 +167,15 @@ implements ActionListener {
 		    gl2.glLight(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse);
 */
 			robot0.PrepareMove(dt);
-			robot1.PrepareMove(dt);
-			if(WillCollide(robot0,robot1) == false) {
+			//robot1.PrepareMove(dt);
+			//if(WillCollide(robot0,robot1) == false) 
+			{
 				robot0.FinalizeMove();
-				robot1.FinalizeMove();
+				//robot1.FinalizeMove();
 			}
 			
 			robot0.render(gl2);
-			robot1.render(gl2);
+			//robot1.render(gl2);
 			
 		gl2.glPopMatrix();
 	}

@@ -190,9 +190,12 @@ implements ActionListener, GLEventListener
         long now_time = System.currentTimeMillis();
         float dt = (now_time - last_time)*0.001f;
     	last_time = now_time;
-
+    	//System.out.println(dt);
+    	
 		// Clear The Screen And The Depth Buffer
     	GL2 gl2 = glautodrawable.getGL().getGL2();
+
+    	gl2.glClearColor(0.8f,0.8f,1, 0f);
     	
         // Special handling for the case where the GLJPanel is translucent
         // and wants to be composited with other Java 2D content
@@ -205,6 +208,7 @@ implements ActionListener, GLEventListener
           gl2.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
         }
         
+        // draw the world
         world.render( gl2, dt );
     }
 	

@@ -6,18 +6,6 @@
 // please see http://www.marginallyclever.com/ for more information.
 
 
-//------------------------------------------------------------------------------
-// CONSTANTS
-//------------------------------------------------------------------------------
-#define MAX_MOTORS    (6)
-
-
-//------------------------------------------------------------------------------
-// GLOBALS
-//------------------------------------------------------------------------------
-Motor motors[MAX_MOTORS];
-char *motor_names="XYZABC";
-
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -28,7 +16,7 @@ char *motor_names="XYZABC";
  * @input newy the destination y position
  **/
 void motor_onestep(int motor_id,int dir) {
-#ifdef VERBOSE
+#if VERBOSE > 2
   Serial.print(motor_names[motor_id]);
 #endif
   Motor &a = motors[motor_id];
@@ -77,7 +65,7 @@ void motor_setup() {
   motors[5].limit_switch_pin=32;
   motors[5].flip=1;
   
-  for(int i=0;i<MAX_MOTORS;++i) {  
+  for(int i=0;i<NUM_AXIES;++i) {  
     // set the motor pin & scale
     pinMode(motors[i].step_pin,OUTPUT);
     pinMode(motors[i].dir_pin,OUTPUT);
@@ -125,8 +113,10 @@ void find_home() {
     motor_onestep(1,-1);
     delay(1);
   }
+#if VERBOSE > 1
   Serial.println(F("Found 1"));
-  
+#endif
+
   // hit switch
   while(digitalRead(motors[0].limit_switch_pin)==HIGH) {
     motor_onestep(0,-1);
@@ -137,7 +127,9 @@ void find_home() {
     motor_onestep(0,1);
     delay(1);
   }
+#if VERBOSE > 1
   Serial.println(F("Found 0"));
+#endif
 
   // hit switch
   while(digitalRead(motors[2].limit_switch_pin)==HIGH) {
@@ -149,10 +141,13 @@ void find_home() {
     motor_onestep(2,1);
     delay(1);
   }
+#if VERBOSE > 1
   Serial.println(F("Found 2"));
-  
+#endif
+
   set_position(HOME_X,HOME_Y,HOME_Z);  // set staring position
   IK(ox,oy,oz,px,py,pz);
+
   Serial.println(F("Found home."));
 }
 

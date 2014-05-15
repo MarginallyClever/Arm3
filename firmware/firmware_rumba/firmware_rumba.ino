@@ -49,8 +49,10 @@
 
 
 // split long lines into pieces to make them more correct.
-#define CM_PER_SEGMENT       (1.0)
-#define DEFAULT_FEEDRATE     (800)
+#define CM_PER_SEGMENT       (0.1)
+#define DEFAULT_FEEDRATE     (200)
+#define DEFAULT_ACCEL        (10)   // how much to accelerate/decelerate
+#define MIN_STEP_DELAY       (250) // fastest the motors can move
 
 // math defines
 #define TWOPI                (PI*2)
@@ -315,7 +317,7 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
  * @input newx the destination x position
  * @input newy the destination y position
  **/
-void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_middle) {
+void line(float newx,float newy,float newz,char accel_flag) {
   a[0].delta = newx-px;
   a[1].delta = newy-py;
   a[2].delta = newz-pz;
@@ -345,23 +347,23 @@ void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_mid
   digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
   digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
 
-  long accel_amnt = 5;
-  long min_step_delay=50;  // fastest speed the motors can move
+  long accel_until;
+  long decel_after;
   
-  long max_accel_steps = (step_delay_us-min_step_delay) / accel_amnt;
-  long accel_until = steps_total/2;
-  long decel_after = steps_total/2;
-  if( accel_until > max_accel_steps ) {
-    accel_until = max_accel_steps;
-    decel_after = steps_total - max_accel_steps;
+  if(accel_flag>0) {
+    decel_after = steps_total;
+    long max_accel_steps = ( step_delay_us - MIN_STEP_DELAY ) / DEFAULT_ACCEL;
+    accel_until = max_accel_steps < steps_total ? max_accel_steps : steps_total;
+  } else {
+    accel_until = 0;
+    decel_after = 0;
   }
   
-  long a1 = step_delay_us;
   Serial.print("TADMC=");  Serial.print(steps_total);
   Serial.print("\t");  Serial.print(accel_until);
-  Serial.print("\t");  Serial.print(decel_after);
-  Serial.print("\t");  Serial.print(max_accel_steps);
+  Serial.print("\t");  Serial.print(steps_total-decel_after);
   Serial.print("\t");  Serial.print(step_delay_us);
+  Serial.print("\t");  Serial.print(accel_flag>0?"1":"0");
   Serial.print("\n");
   
   
@@ -410,10 +412,10 @@ void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_mid
     }
     
     if(i<accel_until) {
-      step_delay_us -= accel_amnt;
+      step_delay_us -= DEFAULT_ACCEL;
     }
     if(i>=decel_after) {
-      step_delay_us += accel_amnt;
+      step_delay_us += DEFAULT_ACCEL;
     }
     pause_efficient();
     
@@ -422,9 +424,6 @@ void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_mid
 #endif
   }
 
-//  long a2 = step_delay_us;  
-//  Serial.print(F("DIFF "));  Serial.println(a2-a1);
-  
   px=newx;
   py=newy;
   pz=newz;
@@ -435,11 +434,11 @@ void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_mid
 }
 
 
-void arm_line(float x,float y,float z,long fr_start,long fr_end,long fr_middle) {
+void arm_line(float x,float y,float z,char accel_flag) {
   float a,b,c;
   IK(x,y,z,a,b,c);
   set_position(x,y,z);
-  line(a,b,c,fr_start,fr_end,fr_middle);
+  line(a,b,c,accel_flag);
 }
 
 
@@ -471,10 +470,8 @@ void line_safe(float x,float y,float z) {
   Serial.print("pieces ");  Serial.println(pieces);
 #endif
 
-  long fr_start=0;
-  long fr_end=0;
-  long fr_middle=0;
-
+  long original_delay = step_delay_us;
+  
   float x0=ox;
   float y0=oy;
   float z0=oz;
@@ -485,9 +482,12 @@ void line_safe(float x,float y,float z) {
 
     arm_line(dx*a+x0,
              dy*a+y0,
-             dz*a+z0,fr_start,fr_end,fr_middle);
+             dz*a+z0,
+             j<=(pieces>>1));  // should accelerate if possible?
   }
-  arm_line(x,y,z,fr_start,fr_end,fr_middle);
+  arm_line(x,y,z,false);
+  
+  step_delay_us = original_delay;
 }
 
 

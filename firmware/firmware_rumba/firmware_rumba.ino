@@ -15,10 +15,12 @@
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 
-// speeds
-#define MIN_STEP_DELAY       (1)
+// speeds & acceleration control
+#define MIN_STEP_DELAY       (100) // fastest the motors can move
 #define MAX_FEEDRATE         (1000000/MIN_STEP_DELAY)
 #define MIN_FEEDRATE         (0.01)
+#define DEFAULT_FEEDRATE     (200)
+#define DEFAULT_ACCEL        (40)   // how much to accelerate/decelerate
 
 // machine dimensions
 #define BASE_TO_SHOULDER_X   (5.37)  // measured in solidworks
@@ -49,10 +51,8 @@
 
 
 // split long lines into pieces to make them more correct.
-#define CM_PER_SEGMENT       (0.1)
-#define DEFAULT_FEEDRATE     (200)
-#define DEFAULT_ACCEL        (10)   // how much to accelerate/decelerate
-#define MIN_STEP_DELAY       (250) // fastest the motors can move
+#define CM_PER_SEGMENT       (0.5)
+
 
 // math defines
 #define TWOPI                (PI*2)
@@ -149,6 +149,12 @@ char mode_abs=1;  // absolute mode?
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
 
+// for acceleration
+long g_accel_until;
+long g_decel_after;
+long g_step_count;
+
+long g_start_delay;
 
 
 //------------------------------------------------------------------------------
@@ -317,7 +323,7 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
  * @input newx the destination x position
  * @input newy the destination y position
  **/
-void line(float newx,float newy,float newz,char accel_flag) {
+void line(float newx,float newy,float newz) {
   a[0].delta = newx-px;
   a[1].delta = newy-py;
   a[2].delta = newz-pz;
@@ -346,26 +352,12 @@ void line(float newx,float newy,float newz,char accel_flag) {
   digitalWrite( MOTOR_3_DIR_PIN, a[3].dir );
   digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
   digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
-
-  long accel_until;
-  long decel_after;
   
-  if(accel_flag>0) {
-    decel_after = steps_total;
-    long max_accel_steps = ( step_delay_us - MIN_STEP_DELAY ) / DEFAULT_ACCEL;
-    accel_until = max_accel_steps < steps_total ? max_accel_steps : steps_total;
-  } else {
-    accel_until = 0;
-    decel_after = 0;
-  }
-  
-  Serial.print("TADMC=");  Serial.print(steps_total);
-  Serial.print("\t");  Serial.print(accel_until);
-  Serial.print("\t");  Serial.print(steps_total-decel_after);
+#if VERBOSE > 3
+  Serial.print("\t");  Serial.print(g_step_count);
   Serial.print("\t");  Serial.print(step_delay_us);
-  Serial.print("\t");  Serial.print(accel_flag>0?"1":"0");
   Serial.print("\n");
-  
+#endif
   
   for( i=0; i<steps_total; ++i ) {
     // M0
@@ -411,10 +403,11 @@ void line(float newx,float newy,float newz,char accel_flag) {
       digitalWrite(MOTOR_5_STEP_PIN,HIGH);
     }
     
-    if(i<accel_until) {
+    ++g_step_count;
+    if(g_step_count<g_accel_until) {
       step_delay_us -= DEFAULT_ACCEL;
     }
-    if(i>=decel_after) {
+    if(g_step_count>=g_decel_after) {
       step_delay_us += DEFAULT_ACCEL;
     }
     pause_efficient();
@@ -434,11 +427,11 @@ void line(float newx,float newy,float newz,char accel_flag) {
 }
 
 
-void arm_line(float x,float y,float z,char accel_flag) {
+void arm_line(float x,float y,float z) {
   float a,b,c;
   IK(x,y,z,a,b,c);
   set_position(x,y,z);
-  line(a,b,c,accel_flag);
+  line(a,b,c);
 }
 
 
@@ -471,22 +464,83 @@ void line_safe(float x,float y,float z) {
 #endif
 
   long original_delay = step_delay_us;
+  step_delay_us = g_start_delay;
   
   float x0=ox;
   float y0=oy;
   float z0=oz;
   float a;
-  for(long j=0;j<pieces;++j) {
+  long j;
+  
+  float a0=px,b0=py,c0=pz;
+  float a1,b1,c1;
+  long ta,tb,tc;
+  long total_steps=0;
+
+  // count total steps
+  for(j=1;j<=pieces;++j) {
     a=(float)j/(float)pieces;
-//  Serial.print("a ");  Serial.println(a);
+    IK(dx*a+x0,
+       dy*a+y0,
+       dz*a+z0,
+       a1,b1,c1);
+    ta=abs(a1-a0);
+    tb=abs(b1-b0);
+    tc=abs(c1-c0);
+    a0=a1;
+    b0=b1;
+    c0=c1;
+    
+    if( ta > tb ) {
+      if( ta > tc ) total_steps += ta;
+      else total_steps += tc;
+    } else if( tb > tc ) {
+      total_steps += tb;
+    } else {
+      total_steps += tc;
+    }
+    
+#if VERBOSE > 3
+    Serial.print(a1); Serial.print("\t");  
+    Serial.print(b1); Serial.print("\t");  
+    Serial.print(c1); Serial.print("\t"); 
+    Serial.print(ta); Serial.print("\t");  
+    Serial.print(tb); Serial.print("\t");  
+    Serial.print(tc); Serial.print("\n");  
+#endif
+  }
+
+  // find steps to accelerate and decelerate
+  long max_accel_steps = abs( step_delay_us - original_delay ) / DEFAULT_ACCEL;
+  if( max_accel_steps > total_steps/2 ) {
+    max_accel_steps = total_steps/2;
+  }
+  g_accel_until = max_accel_steps;
+  g_decel_after = total_steps - max_accel_steps;
+  g_step_count=0;
+  
+#if VERBOSE > 3
+  Serial.print("max=");  Serial.println(total_steps);
+  Serial.print("total=");  Serial.println(total_steps);
+  Serial.print("until=");  Serial.println(g_accel_until);
+  Serial.print("after=");  Serial.println(g_decel_after);
+  Serial.print("now=");  Serial.println(step_delay_us);
+#endif
+  
+  for(j=1;j<pieces;++j) {
+    a=(float)j/(float)pieces;
 
     arm_line(dx*a+x0,
              dy*a+y0,
-             dz*a+z0,
-             j<=(pieces>>1));  // should accelerate if possible?
+             dz*a+z0);  // should accelerate if possible?
   }
-  arm_line(x,y,z,false);
+  arm_line(x,y,z);
   
+#if VERBOSE > 3
+  Serial.print("now=");  Serial.println(step_delay_us);
+#endif
+
+  // just in case
   step_delay_us = original_delay;
 }
 
@@ -738,6 +792,8 @@ void setup() {
   tools_setup();
   
   set_feedrate(DEFAULT_FEEDRATE);  // set default speed
+  g_start_delay = step_delay_us;
+  
   set_position(HOME_X,HOME_Y,HOME_Z);  // set staring position
   IK(ox,oy,oz,px,py,pz);
   help();  // say hello

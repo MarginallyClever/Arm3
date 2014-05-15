@@ -49,7 +49,7 @@
 
 
 // split long lines into pieces to make them more correct.
-#define CM_PER_SEGMENT       (1)
+#define CM_PER_SEGMENT       (1.0)
 #define DEFAULT_FEEDRATE     (800)
 
 // math defines
@@ -187,8 +187,13 @@ void set_feedrate(float nfr) {
   }
   
   step_delay = 1000000.0/nfr;
-  step_delay_us = step_delay % 1000;
-  step_delay_ms = step_delay / 1000;
+  if( step_delay < 10000 ) {
+    step_delay_us = step_delay % 10000;
+    step_delay_ms = 0;
+  } else {
+    step_delay_us = step_delay % 1000;
+    step_delay_ms = step_delay / 1000;
+  }
   fr=nfr;
 }
 
@@ -310,7 +315,7 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
  * @input newx the destination x position
  * @input newy the destination y position
  **/
-void line(float newx,float newy,float newz) {
+void line(float newx,float newy,float newz,long fr_start,long fr_end,long fr_middle) {
   a[0].delta = newx-px;
   a[1].delta = newy-py;
   a[2].delta = newz-pz;
@@ -340,6 +345,26 @@ void line(float newx,float newy,float newz) {
   digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
   digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
 
+  long accel_amnt = 5;
+  long min_step_delay=50;  // fastest speed the motors can move
+  
+  long max_accel_steps = (step_delay_us-min_step_delay) / accel_amnt;
+  long accel_until = steps_total/2;
+  long decel_after = steps_total/2;
+  if( accel_until > max_accel_steps ) {
+    accel_until = max_accel_steps;
+    decel_after = steps_total - max_accel_steps;
+  }
+  
+  long a1 = step_delay_us;
+  Serial.print("TADMC=");  Serial.print(steps_total);
+  Serial.print("\t");  Serial.print(accel_until);
+  Serial.print("\t");  Serial.print(decel_after);
+  Serial.print("\t");  Serial.print(max_accel_steps);
+  Serial.print("\t");  Serial.print(step_delay_us);
+  Serial.print("\n");
+  
+  
   for( i=0; i<steps_total; ++i ) {
     // M0
     over[0] += delta[0];
@@ -384,6 +409,12 @@ void line(float newx,float newy,float newz) {
       digitalWrite(MOTOR_5_STEP_PIN,HIGH);
     }
     
+    if(i<accel_until) {
+      step_delay_us -= accel_amnt;
+    }
+    if(i>=decel_after) {
+      step_delay_us += accel_amnt;
+    }
     pause_efficient();
     
 #if VERBOSE > 2
@@ -391,6 +422,9 @@ void line(float newx,float newy,float newz) {
 #endif
   }
 
+//  long a2 = step_delay_us;  
+//  Serial.print(F("DIFF "));  Serial.println(a2-a1);
+  
   px=newx;
   py=newy;
   pz=newz;
@@ -401,11 +435,11 @@ void line(float newx,float newy,float newz) {
 }
 
 
-void arm_line(float x,float y,float z) {
+void arm_line(float x,float y,float z,long fr_start,long fr_end,long fr_middle) {
   float a,b,c;
   IK(x,y,z,a,b,c);
   set_position(x,y,z);
-  line(a,b,c);
+  line(a,b,c,fr_start,fr_end,fr_middle);
 }
 
 
@@ -437,6 +471,10 @@ void line_safe(float x,float y,float z) {
   Serial.print("pieces ");  Serial.println(pieces);
 #endif
 
+  long fr_start=0;
+  long fr_end=0;
+  long fr_middle=0;
+
   float x0=ox;
   float y0=oy;
   float z0=oz;
@@ -447,9 +485,9 @@ void line_safe(float x,float y,float z) {
 
     arm_line(dx*a+x0,
              dy*a+y0,
-             dz*a+z0);
+             dz*a+z0,fr_start,fr_end,fr_middle);
   }
-  arm_line(x,y,z);
+  arm_line(x,y,z,fr_start,fr_end,fr_middle);
 }
 
 

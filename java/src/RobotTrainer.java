@@ -65,12 +65,11 @@ implements ActionListener, GLEventListener
         frame.setSize( 800, 600 );
         frame.setLayout(new java.awt.BorderLayout());
 
-        // custom to this program start
-		world = new World();
+
+        world = new World();
         mainMenu = new JMenuBar();
         updateMenu();
         frame.setJMenuBar(mainMenu);
-        // custom to this program end
 
         
         final Animator animator = new Animator();
@@ -194,8 +193,7 @@ implements ActionListener, GLEventListener
     	
 		// Clear The Screen And The Depth Buffer
     	GL2 gl2 = glautodrawable.getGL().getGL2();
-
-    	gl2.glClearColor(0.8f,0.8f,1, 0f);
+    	gl2.glClearColor(0,0,0,0);
     	
         // Special handling for the case where the GLJPanel is translucent
         // and wants to be composited with other Java 2D content

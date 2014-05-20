@@ -21,6 +21,9 @@ extends RobotWithSerialConnection {
 	float HOME_X = 13.05f;
 	float HOME_Y = 0;
 	float HOME_Z = 22.2f;
+	float HOME_A = 0;
+	float HOME_B = 0;
+	float HOME_C = 0;
 	boolean HOME_AUTOMATICALLY_ON_STARTUP = true;
 	Cylinder [] volumes = new Cylinder[6];
 	
@@ -29,9 +32,14 @@ extends RobotWithSerialConnection {
 		float angle_0 = 0;
 		float angle_1 = 0;
 		float angle_2 = 0;
+		float angle_3 = 0;
+		float angle_4 = 0;
+		float angle_5 = 0;
 
 		// robot arm coordinates.  Relative to base unless otherwise noted.
 		public Vector3f finger_tip = new Vector3f(HOME_X,HOME_Y,HOME_Z);
+		public Vector3f finger_forward = new Vector3f(1,0,0);
+		public Vector3f finger_right = new Vector3f(0,1,0);
 		private Vector3f wrist = new Vector3f();
 		private Vector3f elbow = new Vector3f();
 		private Vector3f shoulder = new Vector3f();
@@ -50,6 +58,11 @@ extends RobotWithSerialConnection {
 			angle_0 = other.angle_0;
 			angle_1 = other.angle_1;
 			angle_2 = other.angle_2;
+			angle_3 = other.angle_3;
+			angle_4 = other.angle_4;
+			angle_5 = other.angle_5;
+			finger_forward.set(other.finger_forward);
+			finger_right.set(other.finger_right);
 			finger_tip.set(other.finger_tip);
 			wrist.set(other.wrist);
 			elbow.set(other.elbow);
@@ -84,6 +97,10 @@ extends RobotWithSerialConnection {
 	boolean kDown=false;
 	boolean oDown=false;
 	boolean lDown=false;
+	
+	boolean pDown=false;
+	boolean pWasOn=false;
+	boolean moveMode=false;
 	
 	
 	public Vector3f getHome() {  return new Vector3f(HOME_X,HOME_Y,HOME_Z);  }
@@ -151,6 +168,13 @@ extends RobotWithSerialConnection {
 		if (state.angle_1 >   80) return false;
 		if (state.angle_1 < -state.angle_2+ 10) return false;
 		if (state.angle_1 > -state.angle_2+170) return false;
+
+		if (state.angle_3 < -180) return false;
+		if (state.angle_3 >  180) return false;
+		if (state.angle_4 < -180) return false;
+		if (state.angle_4 >  180) return false;
+		if (state.angle_5 < -180) return false;
+		if (state.angle_5 >  180) return false;
 		
 		return true;
 	}
@@ -163,25 +187,24 @@ extends RobotWithSerialConnection {
 	 * @return 0 if successful, 1 if the IK solution cannot be found.
 	 */
 	protected boolean IK(MotionState state) {
-		float a0,a1,a2;
+		float a0,a1,a2,a3,a4,a5;
 		// if we know the position of the wrist relative to the shoulder
 		// we can use intersection of circles to find the elbow.
 		// once we know the elbow position we can find the angle of each joint.
 		// each angle can be converted to motor steps.
-	    
+
+	    // the finger (attachment point for the tool) is a short distance in "front" of the wrist joint
+	    Vector3f finger = new Vector3f(state.finger_tip);
+		state.wrist.set(state.finger_forward);
+		state.wrist.scale(-WRIST_TO_FINGER);
+		state.wrist.add(finger);
+				
 	    // use intersection of circles to find two possible elbow points.
 	    // the two circles are the bicep (shoulder-elbow) and the forearm (elbow-wrist)
 	    // the distance between circle centers is d  
-	    Vector3f arm_plane = new Vector3f(state.finger_tip.x,state.finger_tip.y,0);
+	    Vector3f arm_plane = new Vector3f(state.wrist.x,state.wrist.y,0);
 	    arm_plane.normalize();
 	
-	    // the finger (attachment point for the tool) is a short distance in "front" of the wrist joint
-	    Vector3f finger = new Vector3f(state.finger_tip);
-	    Vector3f s = new Vector3f(arm_plane.x,arm_plane.y,arm_plane.z);
-	    s.scale(WRIST_TO_FINGER);
-	    state.wrist.set(finger);
-	    state.wrist.sub(s);
-
 	    state.shoulder.set(arm_plane);
 	    state.shoulder.scale(BASE_TO_SHOULDER_X);
 	    state.shoulder.z = BASE_TO_SHOULDER_Z;
@@ -210,39 +233,57 @@ extends RobotWithSerialConnection {
 		Vector3f r = new Vector3f();
 		r.cross(n, es);  // check this!
 		r.normalize();
-		s.set(r);
-		s.scale(h);
+		r.scale(h);
 
 		state.elbow.set(mid);
-		state.elbow.sub(s);
+		state.elbow.sub(r);
 		//Vector3f.add(mid, s, elbow);
-		    
-		  // find the angle between elbow-shoulder and the horizontal
-		  Vector3f temp = new Vector3f();
-		  temp.set(state.elbow);
-		  temp.sub(state.shoulder);		  
-		  temp.normalize();
-		  float ax = temp.dot(arm_plane);
-		  float ay = temp.z;
-		  a1 = (float) Math.atan2(ay,ax);
+
 		
-		  // find the angle between elbow-wrist and the horizontal
-		  temp.set(state.elbow);
-		  temp.sub(state.wrist);
-		  temp.normalize();
-		  float bx = temp.dot(arm_plane);
-		  float by = temp.z;
-		  a2 = (float) Math.atan2(by,bx);
-		  
-		  // the easiest part
-		  a0 = (float) Math.atan2(state.finger_tip.y,state.finger_tip.x);
+		// find the angle between elbow-shoulder and the horizontal
+		Vector3f bicep_forward = new Vector3f(state.elbow);
+		bicep_forward.sub(state.shoulder);		  
+		bicep_forward.normalize();
+		float ax = bicep_forward.dot(arm_plane);
+		float ay = bicep_forward.z;
+		a1 = (float) Math.atan2(ay,ax);
+
+		// find the angle between elbow-wrist and the horizontal
+		Vector3f forearm_forward = new Vector3f(state.elbow);
+		forearm_forward.sub(state.wrist);
+		forearm_forward.normalize();
+		float bx = forearm_forward.dot(arm_plane);
+		float by = forearm_forward.z;
+		a2 = (float) Math.atan2(by,bx);
+
+		// the easiest part
+		a0 = (float) Math.atan2(state.wrist.y,state.wrist.x);
+
 		
-		  // all angles are in radians, I want degrees
-		  state.angle_0=a0 * RAD2DEG;
-		  state.angle_1=a1 * -RAD2DEG;
-		  state.angle_2=a2 * RAD2DEG;
-		  
-		  return true;
+		// finger angles
+		// special case: the finger/wrist and wrist/elbow are colinear
+		if(forearm_forward.epsilonEquals(state.finger_forward, 0.01f)) {
+			// singularity - infinite solutions! 
+			a3=a4=a5=0;
+		} else {
+			// find the angle of the ulna rotation
+			a3=0;
+			// find the angle of the wrist bend
+			a4=0;
+			// find the angle of the finger rotation
+			a5=0;
+		}
+		
+		
+		// all angles are in radians, I want degrees
+		state.angle_0=a0 * RAD2DEG;
+		state.angle_1=a1 * -RAD2DEG;
+		state.angle_2=a2 * RAD2DEG;
+		state.angle_3=a3 * RAD2DEG;
+		state.angle_4=a4 * RAD2DEG;
+		state.angle_5=a5 * RAD2DEG;
+
+		return true;
 	}
 
 	
@@ -252,33 +293,57 @@ extends RobotWithSerialConnection {
 		final float vel=5.0f;
 		float dp = vel * delta;
 
-		if (uDown) {
+		if (rDown) {
 			motion_future.finger_tip.x -= dp;
 			changed=true;
 		}
-		if (jDown) {
+		if (fDown) {
 			motion_future.finger_tip.x += dp;
 			changed=true;
 		}
 		
-		if (iDown) {
+		if (tDown) {
 			motion_future.finger_tip.y += dp;
 			changed=true;
 		}
-		if (kDown) {
+		if (gDown) {
 			motion_future.finger_tip.y -= dp;
 			changed=true;
 		}
 		
-		if (oDown) {
+		if (yDown) {
 			motion_future.finger_tip.z += dp;
 			changed=true;
 		}
-		if (lDown) {
+		if (hDown) {
 			motion_future.finger_tip.z -= dp;
 			changed=true;
 		}
 
+
+		// rotations
+		if(uDown) {
+			changed=true;
+		}
+		if(jDown) {
+			changed=true;
+		}
+		
+		if(iDown) {
+			changed=true;
+		}
+		if(kDown) {
+			changed=true;
+		}
+		
+		if(oDown) {
+			changed=true;
+		}
+		if(lDown) {
+			changed=true;
+		}
+		
+		
 		if(changed==true && movePermitted(motion_future)) {
 			if(motion_now.finger_tip.epsilonEquals(motion_future.finger_tip,0.1f)) {
 				arm_moved=true;
@@ -297,8 +362,8 @@ extends RobotWithSerialConnection {
 					  (float)Math.sin(state.angle_0/RAD2DEG),
 					  0);
 		state.shoulder.set(arm_plane.x*BASE_TO_SHOULDER_X,
-						 arm_plane.y*BASE_TO_SHOULDER_X,
-						 BASE_TO_SHOULDER_Z);
+						   arm_plane.y*BASE_TO_SHOULDER_X,
+						               BASE_TO_SHOULDER_Z);
 		
 		temp.set(arm_plane.x*(float)Math.cos(-state.angle_1/RAD2DEG)*SHOULDER_TO_ELBOW,
 				 arm_plane.y*(float)Math.cos(-state.angle_1/RAD2DEG)*SHOULDER_TO_ELBOW,
@@ -353,6 +418,31 @@ extends RobotWithSerialConnection {
 			motion_future.angle_0 -= vel * delta;
 			changed=true;
 		}
+		if(uDown) {
+			motion_future.angle_3 += vel * delta;
+			changed=true;
+		}
+		if(jDown) {
+			motion_future.angle_3 += vel * delta;
+			changed=true;
+		}
+		if(iDown) {
+			motion_future.angle_4 += vel * delta;
+			changed=true;
+		}
+		if(kDown) {
+			motion_future.angle_4 += vel * delta;
+			changed=true;
+		}
+		if(oDown) {
+			motion_future.angle_5 += vel * delta;
+			changed=true;
+		}
+		if(lDown) {
+			motion_future.angle_5 += vel * delta;
+			changed=true;
+		}
+		
 
 		if(changed==true) {
 			if(CheckAngleLimits(motion_future)) {
@@ -377,6 +467,7 @@ extends RobotWithSerialConnection {
 		case KeyEvent.VK_K: kDown=state;  break;
 		case KeyEvent.VK_O: oDown=state;  break;
 		case KeyEvent.VK_L: lDown=state;  break;
+		case KeyEvent.VK_P: pDown=state;  break;
 		}
 	}
 
@@ -392,8 +483,13 @@ extends RobotWithSerialConnection {
 	
 	
 	public void PrepareMove(float delta) {
-		update_fk(delta);
-		update_ik(delta);
+		if(pDown) pWasOn=true;
+		if(!pDown && pWasOn) {
+			pWasOn=false;
+			moveMode=!moveMode;
+		}
+		if(moveMode) update_ik(delta);
+		else		 update_fk(delta);
 		
 		// before the robot is allowed to do anything it has to be homed
 		if(this.isConfirmed) {
@@ -450,7 +546,7 @@ extends RobotWithSerialConnection {
 		
 		// these two should always match!
 		drawFK(gl2);
-		//drawIK(gl2);
+		drawIK(gl2);
 		
 		gl2.glPopMatrix();
 	}
@@ -460,6 +556,8 @@ extends RobotWithSerialConnection {
 		gl2.glPushMatrix();
 		gl2.glTranslatef(motion_now.base.x, motion_now.base.y, motion_now.base.z);
 		gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
+		
+		gl2.glDisable(GL2.GL_DEPTH_TEST);
 		
 		// finger tip
 		gl2.glBegin(GL2.GL_LINES);
@@ -479,8 +577,16 @@ extends RobotWithSerialConnection {
 		gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
 		gl2.glColor3f(1,0.8f,0.2f);
 		gl2.glVertex3f(motion_now.finger_tip.x,motion_now.finger_tip.y,motion_now.finger_tip.z);
+
+		gl2.glColor3f(1,1,1);
+		gl2.glVertex3f(motion_now.finger_tip.x,motion_now.finger_tip.y,motion_now.finger_tip.z);
+		gl2.glVertex3f(motion_now.finger_tip.x+motion_now.finger_right.x,
+					   motion_now.finger_tip.y+motion_now.finger_right.y,
+					   motion_now.finger_tip.z+motion_now.finger_right.z);
 		
 		gl2.glEnd();
+
+		gl2.glEnable(GL2.GL_DEPTH_TEST);
 		
 		gl2.glPopMatrix();
 	}
@@ -544,6 +650,11 @@ extends RobotWithSerialConnection {
 
 		gl2.glTranslatef(a3.x,a3.y,a3.z);	
 		// TODO draw tool here
+		gl2.glBegin(gl2.GL_LINES);
+		gl2.glColor3f(1,1,1);
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(motion_now.finger_right.x,motion_now.finger_right.y,motion_now.finger_right.z);
+		gl2.glEnd();
 		
 		gl2.glPopMatrix();
 	}

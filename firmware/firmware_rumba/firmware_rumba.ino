@@ -69,7 +69,7 @@
 //#define HOME_X               (13.3)
 #define HOME_Y               (0)
 //#define HOME_Z               (23.91+FINGER_TO_FLOOR)
-#define HOME_X               (13.05)
+#define HOME_X               (12.850)  // WAS 13.05
 #define HOME_Z               (22.2)
 
 //*/

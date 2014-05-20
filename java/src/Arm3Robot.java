@@ -423,7 +423,7 @@ extends RobotWithSerialConnection {
 			changed=true;
 		}
 		if(jDown) {
-			motion_future.angle_3 += vel * delta;
+			motion_future.angle_3 -= vel * delta;
 			changed=true;
 		}
 		if(iDown) {
@@ -431,7 +431,7 @@ extends RobotWithSerialConnection {
 			changed=true;
 		}
 		if(kDown) {
-			motion_future.angle_4 += vel * delta;
+			motion_future.angle_4 -= vel * delta;
 			changed=true;
 		}
 		if(oDown) {
@@ -439,7 +439,7 @@ extends RobotWithSerialConnection {
 			changed=true;
 		}
 		if(lDown) {
-			motion_future.angle_5 += vel * delta;
+			motion_future.angle_5 -= vel * delta;
 			changed=true;
 		}
 		
@@ -597,22 +597,24 @@ extends RobotWithSerialConnection {
 		Vector3f a1 = new Vector3f(0,0,SHOULDER_TO_ELBOW);
 		Vector3f a2 = new Vector3f(0,0,ELBOW_TO_WRIST);
 		Vector3f a3 = new Vector3f(0,0,WRIST_TO_FINGER);
-		
+
+		// base 
 		gl2.glPushMatrix();
 		gl2.glTranslatef(motion_now.base.x, motion_now.base.y, motion_now.base.z);
 		gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
 		
-		// base to shoulder
 		gl2.glColor3f(1,1,1);
 		gl2.glRotatef(motion_now.angle_0,0,0,1);
 		gl2.glColor3f(0,0,1);
 		PrimitiveSolids.drawBox(gl2,4,BASE_TO_SHOULDER_X*2,BASE_TO_SHOULDER_Z);
-		gl2.glTranslatef(a0.x,a0.y,a0.z);
 
-		// shoulder to elbow
+		// shoulder
+		gl2.glTranslatef(a0.x,a0.y,a0.z);
 		gl2.glRotatef(90+motion_now.angle_1,0,1,0);
 		gl2.glColor3f(0,1,0);
 		PrimitiveSolids.drawCylinder(gl2,3.2f,3.2f);
+		
+		// bicep
 		gl2.glColor3f(0,0,1);
 		//PrimitiveSolids.drawBox(gl2,3,3,SHOULDER_TO_ELBOW);
 		gl2.glPushMatrix();
@@ -621,27 +623,32 @@ extends RobotWithSerialConnection {
 		PrimitiveSolids.drawCylinder(gl2, SHOULDER_TO_ELBOW/2.0f, 3.0f*0.575f);
 		gl2.glPopMatrix();
 
-		// elbow to wrist
+		// elbow
 		gl2.glTranslatef(a1.x,a1.y,a1.z);
 		gl2.glRotatef(180-motion_now.angle_2-motion_now.angle_1,0,1,0);
 		gl2.glColor3f(0,1,0);
 		PrimitiveSolids.drawCylinder(gl2,2.2f,2.2f);
 		gl2.glColor3f(0,0,1);
 		//PrimitiveSolids.drawBox(gl2,2,2,ELBOW_TO_WRIST);
+
+		// forearm
 		gl2.glPushMatrix();
 		gl2.glTranslatef(a2.x/2,a2.y/2,a2.z/2);
 		gl2.glRotatef(90,1,0,0);
 		PrimitiveSolids.drawCylinder(gl2, ELBOW_TO_WRIST/2.0f, 1.15f);
 		gl2.glPopMatrix();
 
-		// wrist to tool
+		// wrist
 		gl2.glTranslatef(a2.x,a2.y,a2.z);
+		gl2.glRotatef(motion_now.angle_4,a2.x,a2.y,a2.z);
+		gl2.glRotatef(motion_now.angle_3,0,1,0);
 		gl2.glRotatef(-180+motion_now.angle_2,0,1,0);
 		gl2.glColor3f(0,1,0);
 		PrimitiveSolids.drawCylinder(gl2,1.2f,1.2f);
 		gl2.glColor3f(0,0,1);
 		//PrimitiveSolids.drawBox(gl2,1,1,WRIST_TO_FINGER);
 
+		// finger tip
 		gl2.glPushMatrix();
 		gl2.glTranslatef(a3.x/2,a3.y/3,a3.z/2);
 		gl2.glRotatef(90,1,0,0);
@@ -649,12 +656,14 @@ extends RobotWithSerialConnection {
 		gl2.glPopMatrix();
 
 		gl2.glTranslatef(a3.x,a3.y,a3.z);	
-		// TODO draw tool here
-		gl2.glBegin(gl2.GL_LINES);
+		gl2.glRotatef(motion_now.angle_5,a3.x,a3.y,a3.z);
+		// draw finger tip orientation
+		gl2.glBegin(GL2.GL_LINES);
 		gl2.glColor3f(1,1,1);
 		gl2.glVertex3f(0,0,0);
 		gl2.glVertex3f(motion_now.finger_right.x,motion_now.finger_right.y,motion_now.finger_right.z);
 		gl2.glEnd();
+		// TODO draw tool here
 		
 		gl2.glPopMatrix();
 	}

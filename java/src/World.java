@@ -19,7 +19,7 @@ implements ActionListener {
 	Arm3Robot robot0 = new Arm3Robot("0");
 	//Arm3Robot robot1 = new Arm3Robot("1");
 	
-	final int NUM_ROBOTS = 2;
+	final int NUM_ROBOTS = 1;
 	protected int activeRobot=0;
 
 	
@@ -94,13 +94,13 @@ implements ActionListener {
 			robot0.DetectSerialPorts();
 			//robot1.arduino.DetectSerialPorts();
 			//TODO tell RobotTrainer to update all menus
-			RobotTrainer.GetInstance().updateMenu();
+			Arm3.GetInstance().updateMenu();
 			return;
 		}
 		if(subject==buttonDisconnect) {
 			robot0.ClosePort();
 			//robot1.arduino.ClosePort();
-			RobotTrainer.GetInstance().updateMenu();
+			Arm3.GetInstance().updateMenu();
 			return;
 		}
 	}

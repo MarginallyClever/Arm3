@@ -29,7 +29,7 @@ import com.jogamp.opengl.util.Animator;
 
 
 
-public class RobotTrainer 
+public class Arm3 
 implements ActionListener, GLEventListener
 {
 	World world;
@@ -47,7 +47,7 @@ implements ActionListener, GLEventListener
     long start_time;
     long last_time;
     
-    static RobotTrainer __singleton;
+    static Arm3 __singleton;
     
 	
 	public static void main(String[] argv) {
@@ -55,12 +55,12 @@ implements ActionListener, GLEventListener
 	}
 	
 	
-	static public RobotTrainer GetInstance() {
-		if(__singleton==null) __singleton = new RobotTrainer();
+	static public Arm3 GetInstance() {
+		if(__singleton==null) __singleton = new Arm3();
 		return __singleton;
 	}
 	
-	protected RobotTrainer() {
+	protected Arm3() {
         frame = new JFrame( "RobotTrainer" ); 
         frame.setSize( 800, 600 );
         frame.setLayout(new java.awt.BorderLayout());

@@ -118,9 +118,13 @@ extends RobotWithSerialConnection {
 	//TODO check for collisions with http://geomalgorithms.com/a07-_distance.html#dist3D_Segment_to_Segment ?
 	public boolean movePermitted(MotionState state) {
 		// check floor
-		if(state.finger_tip.z<0.25f) return false;
+		if(state.finger_tip.z<0.25f) {
+			return false;
+		}
 		// don't ceiling
-		if(state.finger_tip.z>30.0f) return false;
+		if(state.finger_tip.z>50.0f) {
+			return false;
+		}
 
 		// check far limit
 		Vector3f temp = new Vector3f(state.finger_tip);
@@ -160,6 +164,7 @@ extends RobotWithSerialConnection {
 	
 	
 	protected boolean CheckAngleLimits(MotionState state) {
+		// machine specific limits
 		if (state.angle_0 < -180) return false;
 		if (state.angle_0 >  180) return false;
 		if (state.angle_2 <  -20) return false;
@@ -558,6 +563,7 @@ extends RobotWithSerialConnection {
 		gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
 		
 		gl2.glDisable(GL2.GL_DEPTH_TEST);
+		gl2.glDisable(GL2.GL_LIGHTING);
 		
 		// finger tip
 		gl2.glBegin(GL2.GL_LINES);
@@ -587,6 +593,7 @@ extends RobotWithSerialConnection {
 		gl2.glEnd();
 
 		gl2.glEnable(GL2.GL_DEPTH_TEST);
+		gl2.glEnable(GL2.GL_LIGHTING);
 		
 		gl2.glPopMatrix();
 	}

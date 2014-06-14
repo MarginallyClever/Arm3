@@ -4,7 +4,37 @@ An open source palletizing robot based on the ABB 460.
 
 For more information please visit [Marginally Clever's official page](http://www.marginallyclever.com/shop/robot-arms)
 
-### copyright
+## starting the program
+
+* in OSX: ./latest_official_release/OSX/start.command
+* in windows: ./latest_official_release/start32.bat or ./latest_official_release/start64.bat
+
+## Connecting to the robot
+
+Main menu > Connection(s) > Arm0 > [choose your serial port]
+
+* in windows the port will probably be the last COM port.
+* in OSX it will be the first item listed.
+
+Once you connect the real arm and the virtual arm should synchronize and stay that way.
+The eventual goal is to be able to train the robot in the simulation without being connected.
+Then connect to the robot and run the pre-planned script.  This way scripts can be shared between users.
+
+## controls
+
+click once in the main window.  this way the app can receive keyboard commands.
+
+### Moving the camera
+WASD will fly around the scene.  QE will fly up and down.
+
+### Moving the arm
+P will switch between forward kinematics and inverse kinematics.
+
+In forward kinematics mode: RF, TG, and YH will turn the three motors of the robot arm.
+In inverse kinematics mode: RF, TG, and YH will move the finger tip along the X, Y, and Z axies.
+
+
+## copyright
 
 This file is part of Arm3-v1.
 

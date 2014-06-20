@@ -2,7 +2,7 @@ h1. Arm3
 
 _An open source palletizing robot based on the ABB 460_
 
-For more information please visit [Marginally Clever's official page](http://www.marginallyclever.com/shop/robot-arms)
+For more information please visit "Marginally Clever's official page":http://www.marginallyclever.com/shop/robot-arms
 
 h2. Get it
 
@@ -26,7 +26,7 @@ h2. To run the project in eclipse
 * Choose "Browse" next to "Select root directory" and select the root folder of your download/clone from github.
 * eclipse will scan the folder and find the project.  Choose "Finish"
 
-"java.lang.UnsatisfiedLinkError: no rxtxSerial in java.library.path thrown while loading gnu.io.RXTXCommDriver"
+*java.lang.UnsatisfiedLinkError: no rxtxSerial in java.library.path thrown while loading gnu.io.RXTXCommDriver*
 
 * Open the Project Explorder View, select the Makelangelo project, and choose File > Properties.
 * Choose Java Build Path > Libraries and then expand "RXTXcomm.jar - Makelangelo" clicking the arrow on the left.
@@ -36,7 +36,7 @@ h2. To run the project in eclipse
 * In OSX, choose Makelangelo/src/rxtxnative/Mac_OS_X
 * In Linux, choose Makelangelo/src/rxtxnative/Linux and select your flavor of linux.
 
-"The project: JOGL which is referenced by the classpath, does not exist."
+*The project: JOGL which is referenced by the classpath, does not exist*
 
 https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Download_a_JogAmp_library
 

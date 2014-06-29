@@ -18,7 +18,7 @@ Please visit "the forums":https://marginallyclever.com/forum
 
 h2. Notes
 
-The contents of ./last_official_release are also available on the official purchase page http://makelangelo.com website.
+The contents of ./last_official_release are also available on "the official website":http://www.marginallyclever.com/shop/robot-arms/palletizing-robot-1
 
 h2. To run the project in eclipse
 
@@ -38,9 +38,9 @@ h2. To run the project in eclipse
 
 *The project: JOGL which is referenced by the classpath, does not exist*
 
-https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Download_a_JogAmp_library
+"How to download JOGL":https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Download_a_JogAmp_library
 
-https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Create_a_user_library
+"How to create a JOGL user library":https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Create_a_user_library
 
 
 h2. Copyright

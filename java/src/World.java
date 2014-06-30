@@ -16,7 +16,7 @@ implements ActionListener {
 	
 	/* world contents */
 	Camera camera = new Camera();
-	Arm3Robot robot0 = new Arm3Robot("0");
+	Arm6Robot robot0 = new Arm6Robot("0");
 	//Arm3Robot robot1 = new Arm3Robot("1");
 	
 	final int NUM_ROBOTS = 1;
@@ -180,7 +180,7 @@ implements ActionListener {
 		gl2.glPopMatrix();
 	}
 
-	boolean WillCollide(Arm3Robot a,Arm3Robot b) {
+	boolean WillCollide(Arm6Robot a,Arm6Robot b) {
 		// TODO complete me
 		//Get the cylinders for each robot
 		BoundingVolume [] from = a.GetBoundingVolumes();

@@ -2,11 +2,11 @@
 <classpath>
 	<classpathentry kind="src" path="java/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/Users/danroyer/Documents/workspace/Arm3/java/RXTXcomm.jar">
+	<classpathentry combineaccessrules="false" kind="src" path="/JOGL"/>
+	<classpathentry kind="lib" path="java/libs/jSSC-2.6.0-Release/jssc.jar" sourcepath="java/libs/jSSC-2.6.0-Release/src/jssc-2.6.0-src.jar">
 		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/danroyer/Documents/workspace/Arm3/java/RXTX/rxtxnative/Mac_OS_X"/>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Arm3/java/libs/jSSC-2.6.0-Release/javadoc/jssc-2.6.0-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/JOGL"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

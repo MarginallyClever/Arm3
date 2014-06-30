@@ -5,7 +5,7 @@ import javax.media.opengl.GL2;
 import com.jogamp.newt.event.KeyEvent;
 
 
-public class Arm3Robot 
+public class Arm6Robot 
 extends RobotWithSerialConnection {
 	//math constants
 	final float RAD2DEG = 180.0f/(float)Math.PI;
@@ -143,7 +143,7 @@ extends RobotWithSerialConnection {
 	}
 	
 	
-	public Arm3Robot(String name) {
+	public Arm6Robot(String name) {
 		super(name);
 		
 		// set up bounding volumes
@@ -325,30 +325,16 @@ extends RobotWithSerialConnection {
 			changed=true;
 		}
 
-
+/*
 		// rotations
-		if(uDown) {
-			changed=true;
-		}
-		if(jDown) {
-			changed=true;
-		}
-		
-		if(iDown) {
-			changed=true;
-		}
-		if(kDown) {
-			changed=true;
-		}
-		
-		if(oDown) {
-			changed=true;
-		}
-		if(lDown) {
-			changed=true;
-		}
-		
-		
+		float rotx=0,roty=0,rotz=0;
+		if(uDown) {	rotx= 1; changed=true;	}
+		if(jDown) {	rotx=-1; changed=true;  }
+		if(iDown) { roty=1; changed=true; }
+		if(kDown) { roty=-1; changed=true; }
+		if(oDown) { rotz=1; changed=true; }
+		if(lDown) { rotz=-1; changed=true; }
+*/		
 		if(changed==true && movePermitted(motion_future)) {
 			if(motion_now.finger_tip.epsilonEquals(motion_future.finger_tip,0.1f)) {
 				arm_moved=true;
@@ -375,7 +361,7 @@ extends RobotWithSerialConnection {
 				             (float)Math.sin(-state.angle_1/RAD2DEG)*SHOULDER_TO_ELBOW);
 		state.elbow.set(temp);
 		state.elbow.add(state.shoulder);
-		
+
 		temp.set(arm_plane.x*(float)Math.cos(state.angle_2/RAD2DEG)*-ELBOW_TO_WRIST,
 				 arm_plane.y*(float)Math.cos(state.angle_2/RAD2DEG)*-ELBOW_TO_WRIST,
 				             (float)Math.sin(state.angle_2/RAD2DEG)*-ELBOW_TO_WRIST);
@@ -399,12 +385,12 @@ extends RobotWithSerialConnection {
 
 		if (rDown) {
 			motion_future.angle_1 -= vel * delta;
-			motion_future.angle_2 += vel * delta;
+			//motion_future.angle_2 += vel * delta;
 			changed=true;
 		}
 		if (fDown) {
 			motion_future.angle_1 += vel * delta;
-			motion_future.angle_2 -= vel * delta;
+			//motion_future.angle_2 -= vel * delta;
 			changed=true;
 		}
 		if (tDown) {

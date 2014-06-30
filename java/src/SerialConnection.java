@@ -1,19 +1,10 @@
-import gnu.io.CommPort;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
-import gnu.io.SerialPortEvent;
-import gnu.io.SerialPortEventListener;
+import jssc.*;
 
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.TooManyListenersException;
 import java.util.prefs.Preferences;
 
 import javax.swing.ButtonGroup;
@@ -31,11 +22,7 @@ implements SerialPortEventListener, ActionListener {
 	private String[] portsDetected;
 	
 	public static int BAUD_RATE = 57600;
-	public CommPortIdentifier portIdentifier;
-	public CommPort commPort;
 	public SerialPort serialPort;
-	public InputStream in;
-	public OutputStream out;
 	public boolean portOpened=false;
 	public boolean portConfirmed=false;
 	public String portName;
@@ -94,12 +81,11 @@ implements SerialPortEventListener, ActionListener {
 	
 	@Override
 	public void serialEvent(SerialPortEvent events) {
-        switch (events.getEventType()) {
-        case SerialPortEvent.DATA_AVAILABLE:
-        	if(!portOpened) break;
+        if(events.isRXCHAR()) {
+        	if(!portOpened) return;
             try {
-            	final byte[] buffer = new byte[1024];
-				int len = in.read(buffer);
+            	int len = events.getEventValue();
+				byte [] buffer = serialPort.readBytes(len);
 				if( len>0 ) {
 					String line2 = new String(buffer,0,len);
 					Log(line2);
@@ -113,8 +99,7 @@ implements SerialPortEventListener, ActionListener {
 						}
 					}
 				}
-            } catch (IOException e) {}
-            break;
+            } catch (SerialPortException e) {}
         }
 	}
 	
@@ -130,11 +115,11 @@ implements SerialPortEventListener, ActionListener {
 		try {
 			command=commandQueue.remove(0)+";";
 			Log(command+NL);
-			out.write(command.getBytes());
+			serialPort.writeBytes(command.getBytes());
 			waitingForCue=true;
 		}
 		catch(IndexOutOfBoundsException e1) {}
-		catch(IOException e2) {}
+		catch(SerialPortException e2) {}
 	}
 	
 	public void SendCommand(String command) {
@@ -154,16 +139,13 @@ implements SerialPortEventListener, ActionListener {
 	
 	// find all available serial ports for the settings->ports menu.
 	public void DetectSerialPorts() {
-		@SuppressWarnings("unchecked")
-	    Enumeration<CommPortIdentifier> ports = (Enumeration<CommPortIdentifier>)CommPortIdentifier.getPortIdentifiers();
-	    ArrayList<String> portList = new ArrayList<String>();
-	    while (ports.hasMoreElements()) {
-	        CommPortIdentifier port = (CommPortIdentifier) ports.nextElement();
-	        if (port.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-	        	portList.add(port.getName());
-	        }
-	    }
-	    portsDetected = (String[]) portList.toArray(new String[0]);
+        if(System.getProperty("os.name").equals("Mac OS X")){
+        	portsDetected = SerialPortList.getPortNames("/dev/");
+            //System.out.println("OS X");
+        } else {
+        	portsDetected = SerialPortList.getPortNames("COM");
+            //System.out.println("Windows");
+        }
 	}
 	
 	public boolean PortExists(String portName) {
@@ -184,13 +166,10 @@ implements SerialPortEventListener, ActionListener {
 		
 	    if (serialPort != null) {
 	        try {
-	            // Close the I/O streams.
-	            out.close();
-	            in.close();
 		        // Close the port.
 		        serialPort.removeEventListener();
-		        serialPort.close();
-	        } catch (IOException e) {
+		        serialPort.closePort();
+	        } catch (SerialPortException e) {
 	            // Don't care
 	        }
 	    }
@@ -207,64 +186,19 @@ implements SerialPortEventListener, ActionListener {
 		ClosePort();
 		
 		Log("Connecting to "+portName+"..."+NL);
-		
-		try {
-			portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
-		}
-		catch(Exception e) {
-			Log("Ports could not be identified:"+e.getMessage()+NL);
-			e.printStackTrace();
-			return 1;
-		}
-
-		if ( portIdentifier.isCurrentlyOwned() ) {
-    	    Log("Error: Another program is currently using this port."+NL);
-			return 2;
-		}
 
 		// open the port
+		serialPort = new SerialPort(portName);
 		try {
-		    commPort = portIdentifier.open("DrawbotGUI",2000);
-		}
-		catch(Exception e) {
-			Log("Port could not be opened:"+e.getMessage()+NL);
-			e.printStackTrace();
+            serialPort.openPort();// Open serial port
+            serialPort.setParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
+            serialPort.addEventListener(this);
+        } catch (SerialPortException e) {
+			Log("<span style='color:red'>Port could not be configured:"+e.getMessage()+"</span>\n");
 			return 3;
 		}
 
-	    if( ( commPort instanceof SerialPort ) == false ) {
-			Log("Error: Only serial ports are handled."+NL);
-			return 4;
-		}
-
-		// set the port parameters (like baud rate)
-		serialPort = (SerialPort)commPort;
-		try {
-			serialPort.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
-		}
-		catch(Exception e) {
-			Log("Port could not be configured:"+e.getMessage()+NL);
-			return 5;
-		}
-
-		try {
-			in = serialPort.getInputStream();
-			out = serialPort.getOutputStream();
-		}
-		catch(Exception e) {
-			Log("Streams could not be opened:"+e.getMessage()+NL);
-			return 6;
-		}
-		
-		try {
-			serialPort.addEventListener(this);
-			serialPort.notifyOnDataAvailable(true);
-		}
-		catch(TooManyListenersException e) {
-			Log("Streams could not be opened:"+e.getMessage()+NL);
-			return 7;
-		}
-
+		Log("<span style='color:green'>Opened.</span>\n");
 		portOpened=true;
 		SetLastPort(portName);
 

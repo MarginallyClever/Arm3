@@ -1,3 +1,5 @@
+package Arm3;
+
 
 import java.awt.BorderLayout;
 import java.awt.Window;
@@ -5,11 +7,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.prefs.Preferences;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
@@ -18,6 +25,10 @@ import javax.media.opengl.GLPipelineFactory;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.glu.GLU;
+
+import Generators.GcodeGenerator;
+import Generators.HilbertCurveGenerator;
+import Generators.YourMessageHereGenerator;
 
 import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.MouseAdapter;
@@ -32,11 +43,16 @@ import com.jogamp.opengl.util.Animator;
 public class Arm3 
 implements ActionListener, GLEventListener
 {
+	static final long serialVersionUID=1;
+	static final String version="1";
+    static Arm3 __singleton;
+
 	World world;
-	
+
 	/** menus */
-	static JMenuBar mainMenu;
-	static JMenuItem buttonQuit;
+	JMenuBar mainMenu;
+	JMenuItem buttonAbout, buttonCheckForUpdate;
+	JMenuItem buttonQuit;
 	
 	/* window management */
     final JFrame frame; 
@@ -47,20 +63,38 @@ implements ActionListener, GLEventListener
     long start_time;
     long last_time;
     
-    static Arm3 __singleton;
+
+	// settings
+	private Preferences prefs;
+	private String[] recentFiles = {"","","","","","","","","",""};
+	
+	// Generators
+	GcodeGenerator [] generators;
+	JMenuItem generatorButtons[];
     
 	
 	public static void main(String[] argv) {
-		GetInstance();
+		getSingleton();
 	}
 	
 	
-	static public Arm3 GetInstance() {
+	static public Arm3 getSingleton() {
 		if(__singleton==null) __singleton = new Arm3();
 		return __singleton;
 	}
 	
+	
+	public JFrame GetMainFrame() {
+		return frame;
+	}
+	
+	
 	protected Arm3() {
+		prefs = Preferences.userRoot().node("GcodeSender");
+		
+		LoadConfig();
+		LoadGenerators();
+		
         frame = new JFrame( "RobotTrainer" ); 
         frame.setSize( 800, 600 );
         frame.setLayout(new java.awt.BorderLayout());
@@ -99,30 +133,194 @@ implements ActionListener, GLEventListener
     }
 	
 	
+	protected void LoadGenerators() {
+		// TODO find the generator jar files and load them.
+		generators = new GcodeGenerator[2];
+		generators[0] = new HilbertCurveGenerator();
+		generators[1] = new YourMessageHereGenerator();
+		
+		generatorButtons = new JMenuItem[2];
+	}
+	
+	protected JMenu LoadGenerateMenu() {
+		JMenu menu = new JMenu("Generate");
+        //menu.setEnabled(!running);
+        
+        for(int i=0;i<generators.length;++i) {
+        	generatorButtons[i] = new JMenuItem(generators[i].GetMenuName());
+        	generatorButtons[i].addActionListener(this);
+        	menu.add(generatorButtons[i]);
+        }
+        
+        return menu;
+	}
+	
+	
 	public void updateMenu() {
 		mainMenu.removeAll();
 		
         JMenu menu = new JMenu("RobotTrainer");
+        
+	        buttonAbout = new JMenuItem("About",KeyEvent.VK_A);
+	        buttonAbout.getAccessibleContext().setAccessibleDescription("About this program");
+	        buttonAbout.addActionListener(this);
+	        menu.add(buttonAbout);
+	        
+	        buttonCheckForUpdate = new JMenuItem("Check for update",KeyEvent.VK_A);
+	        buttonCheckForUpdate.addActionListener(this);
+	        menu.add(buttonCheckForUpdate);
 	        
 	        buttonQuit = new JMenuItem("Quit");
+	        buttonQuit.getAccessibleContext().setAccessibleDescription("Goodbye...");
 	        buttonQuit.addActionListener(this);
 	        menu.add(buttonQuit);
         
         mainMenu.add(menu);
-		
+        
         mainMenu.add(world.updateMenu());
+
+        mainMenu.add(LoadGenerateMenu());
+	}
+	
+	
+	public void CheckForUpdate() {
+		try {
+		    // Get Github info?
+			URL github = new URL("https://www.marginallyclever.com/other/software-update-check.php?id=3");
+	        BufferedReader in = new BufferedReader(new InputStreamReader(github.openStream()));
+
+	        String inputLine;
+	        if((inputLine = in.readLine()) != null) {
+	        	if( inputLine.compareTo(version) !=0 ) {
+	        		JOptionPane.showMessageDialog(null,"A new version of this software is available.  The latest version is "+inputLine+"\n"
+	        											+"Please visit http://www.marginallyclever.com/ to get the new hotness.");
+	        	} else {
+	        		JOptionPane.showMessageDialog(null,"This version is up to date.");
+	        	}
+	        } else {
+	        	throw new Exception();
+	        }
+	        in.close();
+		} catch (Exception e) {
+    		JOptionPane.showMessageDialog(null,"Sorry, I failed.  Please visit http://www.marginallyclever.com/ to check yourself.");
+		}
 	}
 	
 	
 	public void actionPerformed(ActionEvent e) {
-		Object o = e.getSource();
+		Object subject = e.getSource();
 		
-		if(o==buttonQuit) {
+		if( subject == buttonAbout ) {
+			JOptionPane.showMessageDialog(null,"<html><body>"
+					+"<h1>Arm3 v"+version+"</h1>"
+					+"<h3><a href='http://www.marginallyclever.com/'>http://www.marginallyclever.com/</a></h3>"
+					+"<p>Created by Dan Royer (dan@marginallyclever.com).</p><br>"
+					+"<p>To get the latest version please visit<br><a href='https://github.com/MarginallyClever/Arm3'>https://github.com/MarginallyClever/Arm3</a></p><br>"
+					+"<p>This program is open source and free.  If this was helpful<br> to you, please buy me a thank you beer through Paypal.</p>"
+					+"</body></html>");
+			return;
+		}
+		if( subject == buttonCheckForUpdate ) {
+			CheckForUpdate();
+			return;
+		}
+		if( subject == buttonQuit ) {
 			System.exit(0);
 			return;
 		}
 	}
-    
+
+	protected void LoadConfig() {
+		GetRecentFiles();
+	}
+
+	protected void SaveConfig() {
+		GetRecentFiles();
+	}
+	
+	
+	protected boolean GeneratorMenuAction(ActionEvent e) {
+		Object subject = e.getSource();
+		
+        for(int i=0;i<generators.length;++i) {
+        	if(subject==generatorButtons[i]) {
+        		generators[i].Generate();
+        		return true;
+        	}
+		}
+		return false;
+	}
+	
+	
+	/**
+	 * changes the order of the recent files list in the File submenu, saves the updated prefs, and refreshes the menus.
+	 * @param filename the file to push to the top of the list.
+	 */
+	public void UpdateRecentFiles(String filename) {
+		int cnt = recentFiles.length;
+		String [] newFiles = new String[cnt];
+		
+		newFiles[0]=filename;
+		
+		int i,j=1;
+		for(i=0;i<cnt;++i) {
+			if(!filename.equals(recentFiles[i]) && recentFiles[i] != "") {
+				newFiles[j++] = recentFiles[i];
+				if(j == cnt ) break;
+			}
+		}
+
+		recentFiles=newFiles;
+
+		// update prefs
+		for(i=0;i<cnt;++i) {
+			if( recentFiles[i]==null ) recentFiles[i] = new String("");
+			if( recentFiles[i].isEmpty()==false ) {
+				prefs.put("recent-files-"+i, recentFiles[i]);
+			}
+		}
+		
+		updateMenu();
+	}
+	
+	// A file failed to load.  Remove it from recent files, refresh the menu bar.
+	public void RemoveRecentFile(String filename) {
+		int i;
+		for(i=0;i<recentFiles.length-1;++i) {
+			if(recentFiles[i]==filename) {
+				break;
+			}
+		}
+		for(;i<recentFiles.length-1;++i) {
+			recentFiles[i]=recentFiles[i+1];
+		}
+		recentFiles[recentFiles.length-1]="";
+
+		// update prefs
+		for(i=0;i<recentFiles.length;++i) {
+			if(!recentFiles[i].isEmpty()) {
+				prefs.put("recent-files-"+i, recentFiles[i]);
+			}
+		}
+		
+		updateMenu();
+	}
+	
+	// Load recent files from prefs
+	public void GetRecentFiles() {
+		int i;
+		for(i=0;i<recentFiles.length;++i) {
+			recentFiles[i] = prefs.get("recent-files-"+i, recentFiles[i]);
+		}
+	}
+
+	/**
+	 * Open a gcode file to run on a robot.  This doesn't make sense if there's more than one robot!
+	 * @param filename the file to open
+	 */
+	public void OpenFile(String filename) {
+		
+	}
 
     @Override
     public void reshape( GLAutoDrawable glautodrawable, int x, int y, int width, int height ) {

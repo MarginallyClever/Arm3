@@ -8,6 +8,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/Arm3/java/libs/jSSC-2.6.0-Release/javadoc/jssc-2.6.0-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="java/libs/vecmath/vecmath-1.5.2.jar"/>
+	<classpathentry kind="lib" path="java/libs/vecmath/vecmath-1.5.2.jar" sourcepath="java/libs/vecmath/vecmath-1.5.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

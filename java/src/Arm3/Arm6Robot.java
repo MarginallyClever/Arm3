@@ -125,6 +125,7 @@ extends RobotWithSerialConnection {
 	
 	public Vector3f getHome() {  return new Vector3f(HOME_X,HOME_Y,HOME_Z);  }
 	
+	
 	public void setHome(Vector3f newhome) {
 		HOME_X=newhome.x;
 		HOME_Y=newhome.y;
@@ -137,11 +138,11 @@ extends RobotWithSerialConnection {
 	
 	//TODO check for collisions with http://geomalgorithms.com/a07-_distance.html#dist3D_Segment_to_Segment ?
 	public boolean movePermitted(MotionState state) {
-		// check floor
+		// don't hit floor
 		if(state.finger_tip.z<0.25f) {
 			return false;
 		}
-		// don't ceiling
+		// don't hit ceiling
 		if(state.finger_tip.z>50.0f) {
 			return false;
 		}
@@ -283,40 +284,74 @@ extends RobotWithSerialConnection {
 
 		// find the angle of the base
 		a0 = (float) Math.atan2(state.wrist.y,state.wrist.x);
+		
 
+		Vector3f right_uprotated;
+		Vector3f forward = new Vector3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
+		Vector3f right = new Vector3f(HOME_RIGHT_X,HOME_RIGHT_Y,HOME_RIGHT_Z);
+		Vector3f up = new Vector3f();
 		
-		// find the angle of the ulna rotation
-		//if(Math.abs(forearm_forward.dot(state.finger_forward))<0.99999) {
-			Vector3f arm_plane_normal = new Vector3f();
-			Vector3f up = new Vector3f(0,0,1);
-			arm_plane_normal.cross(arm_plane,up);
-			float cx = state.finger_forward.z;
-			float cy = state.finger_forward.dot(arm_plane_normal);
-			a4 = 0;//(float) Math.atan2(cy,cx);
-		//	float sign_check = state.angle_4 / RAD2DEG;
-		//} else {
-		//	a4 = state.angle_4 / RAD2DEG; 
-		//}
+		up.cross(forward,right);
 		
+		Vector3f of = new Vector3f(forward);
+		Vector3f or = new Vector3f(right);
+		Vector3f ou = new Vector3f(up);
+		
+		//result = RotateAroundAxis(right,of,motion_now.iku);
+		right_uprotated = RotateAroundAxis(right,or,motion_now.ikv);
+		right_uprotated = RotateAroundAxis(right_uprotated,ou,motion_now.ikw);
+
+		Vector3f forearm_normal = new Vector3f();
+		forearm_normal.cross(state.finger_forward,right_uprotated);
+		forearm_normal.normalize();
+		
+		Vector3f forearm_up = new Vector3f();
+		forearm_up.cross(forearm_forward,forearm_normal);
+		
+		Vector3f ffn = new Vector3f(state.finger_forward);
+		ffn.normalize();
 		
 		// find the angle of the wrist bend
-		//if(Math.abs(forearm_forward.dot(state.finger_forward))<0.99999) {
-			Vector3f ffn = new Vector3f(forearm_forward);
-			float s = forearm_forward.dot(motion_now.finger_forward);
-			ffn.scale(s);
-			Vector3f temp = new Vector3f(motion_now.finger_forward);
-			temp.sub(ffn);
-			temp.normalize();
-			
-			float dx = -state.finger_forward.dot(forearm_forward);
-			float dy = state.finger_forward.dot(temp);
-			a3=(float) Math.atan2(dy,dx);
-		//} else {
-		//	a3 = state.angle_3 / RAD2DEG;
-		//}
+		{
+			float dx = -ffn.dot(forearm_forward);
+			float dy = ffn.dot(forearm_up);
+			a4=(float) Math.atan2(dy,dx);
+		}
 		
 		// find the angle of the finger rotation
-		a5=0;
+		{
+			float dy = forearm_normal.dot(state.finger_right);
+			float dx = forearm_up.dot(state.finger_right);
+			a5=(float) Math.atan2(dy,dx);
+		}
+		
+		// find the angle of the ulna rotation
+		{
+	    
+			Vector3f arm_plane_normal = new Vector3f();
+			Vector3f arm_up = new Vector3f(0,0,1);
+			arm_plane_normal.cross(arm_plane,arm_up);
+			
+			Vector3f ffn2 = new Vector3f(forearm_forward);
+			ffn2.normalize();
+			float df= motion_now.finger_forward.dot(ffn2);
+			if(Math.abs(df)<0.999999) {
+				Vector3f forearm_up_unrotated = new Vector3f();
+				forearm_up_unrotated.cross(forearm_forward,arm_plane_normal);
+				
+				Vector3f finger_on_forearm = new Vector3f(motion_now.finger_forward);
+				Vector3f temp = new Vector3f(ffn2);
+				temp.scale(df);
+				finger_on_forearm.sub(temp);
+				finger_on_forearm.normalize();
+				
+				float cy = forearm_normal.dot(finger_on_forearm);
+				float cx = forearm_up.dot(finger_on_forearm);
+				a3 = (float) -Math.atan2(cy,cx);
+			} else {
+				a3 = 0;
+			}
+		}
 		
 		// all angles are in radians, I want degrees
 		state.angle_0=a0 * RAD2DEG;
@@ -372,7 +407,8 @@ extends RobotWithSerialConnection {
 		if(oDown) ru=0.1f;
 		if(lDown) ru=-0.1f;
 
-		if(rw!=0 || rv!=0 || ru!=0 ) {
+		//if(rw!=0 || rv!=0 || ru!=0 )
+		{
 			// On a 3-axis robot when homed the forward axis of the finger tip is pointing downward.
 			// More complex arms start from the same assumption.
 			Vector3f forward = new Vector3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
@@ -391,7 +427,7 @@ extends RobotWithSerialConnection {
 			
 			Vector3f result;
 
-			result = RotateAroundAxis(forward,of,motion_future.iku);
+			result = RotateAroundAxis(forward,of,motion_future.iku);  // TODO rotating around itself has no effect.
 			result = RotateAroundAxis(result,or,motion_future.ikv);
 			result = RotateAroundAxis(result,ou,motion_future.ikw);
 			motion_future.finger_forward.set(result);
@@ -412,6 +448,7 @@ extends RobotWithSerialConnection {
 			motion_future.finger_tip.set(motion_now.finger_tip);
 		}
 	}
+	
 		
 	/**
 	 * Rotate the point xyz around the line passing through abc with direction uvw
@@ -700,13 +737,13 @@ extends RobotWithSerialConnection {
 		gl2.glVertex3f(motion_now.finger_tip.x+motion_now.finger_forward.x,
 					   motion_now.finger_tip.y+motion_now.finger_forward.y,
 					   motion_now.finger_tip.z+motion_now.finger_forward.z);
-		/*
+
 		// DEBUG START
 		Vector3f forearm_forward = new Vector3f(motion_now.elbow);
 		forearm_forward.sub(motion_now.wrist);
 		forearm_forward.normalize();
-		
 		Vector3f ffn = new Vector3f(forearm_forward);
+		/*
 		float s = forearm_forward.dot(motion_now.finger_forward);
 		ffn.scale(s);
 		Vector3f temp = new Vector3f(motion_now.finger_forward);
@@ -728,9 +765,7 @@ extends RobotWithSerialConnection {
 		gl2.glVertex3f(motion_now.wrist.x+temp.x,
 						motion_now.wrist.y+temp.y,
 						motion_now.wrist.z+temp.z);
-		// DEBUG END
-		*/
-		// DEBUG 2 START
+
 		Vector3f arm_plane = new Vector3f((float)Math.cos(motion_now.angle_0/RAD2DEG),
 										  (float)Math.sin(motion_now.angle_0/RAD2DEG),
 										  0);
@@ -742,7 +777,6 @@ extends RobotWithSerialConnection {
 		axis.normalize();
 		fn = RotateAroundAxis(fn, axis, -motion_now.angle_3/RAD2DEG);
 		up = RotateAroundAxis(up, axis, -motion_now.angle_3/RAD2DEG);
-		// DEBUG 2 END
 
 		gl2.glColor3f(0,0,1);
 		gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
@@ -754,6 +788,92 @@ extends RobotWithSerialConnection {
 		gl2.glVertex3f(motion_now.wrist.x+up.x,
 						motion_now.wrist.y+up.y,
 						motion_now.wrist.z+up.z);
+*/
+		Vector3f right_unrotated;
+		Vector3f forward = new Vector3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
+		Vector3f right = new Vector3f(HOME_RIGHT_X,HOME_RIGHT_Y,HOME_RIGHT_Z);
+		Vector3f up = new Vector3f();
+		
+		up.cross(forward,right);
+		
+		Vector3f of = new Vector3f(forward);
+		Vector3f or = new Vector3f(right);
+		Vector3f ou = new Vector3f(up);
+		
+		//result = RotateAroundAxis(right,of,motion_now.iku);
+		right_unrotated = RotateAroundAxis(right,or,motion_now.ikv);
+		right_unrotated = RotateAroundAxis(right_unrotated,ou,motion_now.ikw);
+
+		Vector3f forearm_normal = new Vector3f();
+		forearm_normal.cross(motion_now.finger_forward,right_unrotated);
+		forearm_normal.normalize();
+		
+		Vector3f forearm_up = new Vector3f();
+		forearm_up.cross(forearm_forward,forearm_normal);
+/*
+		gl2.glColor3f(0,1,1);
+		gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+		gl2.glVertex3f(motion_now.wrist.x+forearm_normal.x*3,
+						motion_now.wrist.y+forearm_normal.y*3,
+						motion_now.wrist.z+forearm_normal.z*3);
+		gl2.glColor3f(1,0,1);
+		gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+		gl2.glVertex3f(motion_now.wrist.x+forearm_up.x*3,
+						motion_now.wrist.y+forearm_up.y*3,
+						motion_now.wrist.z+forearm_up.z*3);
+*/
+	    Vector3f arm_plane = new Vector3f(motion_now.wrist.x,motion_now.wrist.y,0);
+	    arm_plane.normalize();
+	    
+		Vector3f arm_plane_normal = new Vector3f();
+		Vector3f arm_up = new Vector3f(0,0,1);
+		arm_plane_normal.cross(arm_plane,arm_up);
+		
+		ffn.normalize();
+		float df= motion_now.finger_forward.dot(ffn);
+		if(Math.abs(df)<0.999999) {
+			Vector3f forearm_up_unrotated = new Vector3f();
+			forearm_up_unrotated.cross(forearm_forward,arm_plane_normal);
+			
+			Vector3f finger_on_forearm = new Vector3f(motion_now.finger_forward);
+			Vector3f temp = new Vector3f(ffn);
+			temp.scale(df);
+			finger_on_forearm.sub(temp);
+			finger_on_forearm.normalize();
+			
+			gl2.glColor3f(0,1,1);
+			gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+			gl2.glVertex3f(motion_now.wrist.x+arm_plane_normal.x*3,
+							motion_now.wrist.y+arm_plane_normal.y*3,
+							motion_now.wrist.z+arm_plane_normal.z*3);
+			
+			gl2.glColor3f(1,0,1);
+			gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+			gl2.glVertex3f(motion_now.wrist.x+right_unrotated.x*3,
+							motion_now.wrist.y+right_unrotated.y*3,
+							motion_now.wrist.z+right_unrotated.z*3);
+			/*
+			gl2.glColor3f(1,1,1);
+			gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+			gl2.glVertex3f(motion_now.wrist.x+motion_now.finger_forward.x,
+							motion_now.wrist.y+motion_now.finger_forward.y,
+							motion_now.wrist.z+motion_now.finger_forward.z);
+
+			gl2.glColor3f(1,1,1);
+			gl2.glVertex3f(motion_now.wrist.x+motion_now.finger_forward.x,
+					motion_now.wrist.y+motion_now.finger_forward.y,
+					motion_now.wrist.z+motion_now.finger_forward.z);
+			gl2.glVertex3f(motion_now.wrist.x+motion_now.finger_forward.x-temp.x,
+							motion_now.wrist.y+motion_now.finger_forward.y-temp.y,
+							motion_now.wrist.z+motion_now.finger_forward.z-temp.z);*/
+			gl2.glColor3f(1,1,1);
+			gl2.glVertex3f(motion_now.wrist.x,motion_now.wrist.y,motion_now.wrist.z);
+			gl2.glVertex3f(motion_now.wrist.x+finger_on_forearm.x,
+							motion_now.wrist.y+finger_on_forearm.y,
+							motion_now.wrist.z+finger_on_forearm.z);
+
+		}
+		// DEBUG END
 		
 		gl2.glEnd();
 
@@ -772,7 +892,86 @@ extends RobotWithSerialConnection {
 		Vector3f a3 = new Vector3f(0,0,WRIST_TO_FINGER);
 
 		boolean draw_simple=true;
+
+		// base 
+		gl2.glPushMatrix();
+		gl2.glTranslatef(motion_now.base.x, motion_now.base.y, motion_now.base.z);
+		gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
+		
+		gl2.glColor3f(1,1,1);
+		gl2.glRotatef(motion_now.angle_0,0,0,1);
+		gl2.glColor3f(0,0,1);
+		PrimitiveSolids.drawBox(gl2,4,BASE_TO_SHOULDER_X*2,BASE_TO_SHOULDER_Z);
+
+		// shoulder
+		gl2.glTranslatef(a0.x,a0.y,a0.z);
+		gl2.glRotatef(90+motion_now.angle_1,0,1,0);
+		gl2.glColor3f(0,1,0);
+		PrimitiveSolids.drawCylinder(gl2,3.2f,3.2f);
+		
+		// bicep
+		gl2.glColor3f(0,0,1);
+		//PrimitiveSolids.drawBox(gl2,3,3,SHOULDER_TO_ELBOW);
+		gl2.glPushMatrix();
+		gl2.glTranslatef(a1.x/2,a1.y/2,a1.z/2);
+		gl2.glRotatef(90,1,0,0);
+		PrimitiveSolids.drawCylinder(gl2, SHOULDER_TO_ELBOW/2.0f, 3.0f*0.575f);
+		gl2.glPopMatrix();
+
+		// elbow
+		gl2.glTranslatef(a1.x,a1.y,a1.z);
+		gl2.glRotatef(180-motion_now.angle_2-motion_now.angle_1,0,1,0);
+		gl2.glColor3f(0,1,0);
+		PrimitiveSolids.drawCylinder(gl2,2.2f,2.2f);
+		gl2.glColor3f(0,0,1);
+		//PrimitiveSolids.drawBox(gl2,2,2,ELBOW_TO_WRIST);
+
+		// forearm
+		gl2.glPushMatrix();
+		gl2.glTranslatef(a2.x/2,a2.y/2,a2.z/2);
+		gl2.glRotatef(90,1,0,0);
+		PrimitiveSolids.drawCylinder(gl2, ELBOW_TO_WRIST/2.0f, 1.15f);
+		gl2.glPopMatrix();
+
+		// wrist
+		gl2.glTranslatef(a2.x,a2.y,a2.z);
+		gl2.glRotatef(-motion_now.angle_3,a2.x,a2.y,a2.z);
+		gl2.glRotatef(motion_now.angle_4,0,1,0);
+		gl2.glRotatef(-180+motion_now.angle_2,0,1,0);
+		gl2.glColor3f(0,1,0);
+		PrimitiveSolids.drawCylinder(gl2,1.2f,1.2f);
+		gl2.glColor3f(0,0,1);
+		//PrimitiveSolids.drawBox(gl2,1,1,WRIST_TO_FINGER);
+
+		// finger tip
+		gl2.glPushMatrix();
+		gl2.glTranslatef(a3.x/2,a3.y/3,a3.z/2);
+		gl2.glRotatef(90,1,0,0);
+		PrimitiveSolids.drawCylinder(gl2, WRIST_TO_FINGER/2.0f, 1.0f*0.575f);
+		gl2.glPopMatrix();
+
+		gl2.glTranslatef(a3.x,a3.y,a3.z);	
+		gl2.glRotatef(motion_now.angle_5,a3.x,a3.y,a3.z);
+		//gl2.glRotatef(-motion_now.angle_3,a2.x,a2.y,a2.z);
+		//gl2.glRotatef(motion_now.angle_4,0,1,0);
+		//gl2.glRotatef(-180+motion_now.angle_2,0,1,0);
+		gl2.glRotatef(-90,0,1,0);
+		// draw finger tip orientation
+		gl2.glDisable(GL2.GL_LIGHTING);
+		gl2.glBegin(GL2.GL_LINES);
+		gl2.glColor3f(1,0,1);  // magenta
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(HOME_RIGHT_X,HOME_RIGHT_Y,HOME_RIGHT_Z);
+		gl2.glColor3f(0,1,0);  // green
+		gl2.glVertex3f(0,0,0);
+		gl2.glVertex3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
+		gl2.glEnd();
+		gl2.glEnable(GL2.GL_LIGHTING);
+		// TODO draw tool here
+		gl2.glPopMatrix();
+
 		if(draw_simple) {
+			gl2.glDisable(GL2.GL_DEPTH_TEST);
 			gl2.glDisable(GL2.GL_LIGHTING);
 
 			// base 
@@ -829,7 +1028,7 @@ extends RobotWithSerialConnection {
 			gl2.glBegin(GL2.GL_LINES);
 			gl2.glColor3f(1,0,1);  // magenta
 			gl2.glVertex3f(0,0,0);
-			gl2.glVertex3f(HOME_RIGHT_X,HOME_RIGHT_Y,HOME_RIGHT_Z);
+			gl2.glVertex3f(HOME_RIGHT_X*5,HOME_RIGHT_Y*5,HOME_RIGHT_Z*5);
 			gl2.glColor3f(0,1,0);  // green
 			gl2.glVertex3f(0,0,0);
 			gl2.glVertex3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
@@ -840,83 +1039,7 @@ extends RobotWithSerialConnection {
 			gl2.glPopMatrix();
 
 			gl2.glEnable(GL2.GL_LIGHTING);
-		} else {
-			// base 
-			gl2.glPushMatrix();
-			gl2.glTranslatef(motion_now.base.x, motion_now.base.y, motion_now.base.z);
-			gl2.glRotatef(motion_now.base_pan, motion_now.base_up.x,motion_now.base_up.y,motion_now.base_up.z);
-			
-			gl2.glColor3f(1,1,1);
-			gl2.glRotatef(motion_now.angle_0,0,0,1);
-			gl2.glColor3f(0,0,1);
-			PrimitiveSolids.drawBox(gl2,4,BASE_TO_SHOULDER_X*2,BASE_TO_SHOULDER_Z);
-	
-			// shoulder
-			gl2.glTranslatef(a0.x,a0.y,a0.z);
-			gl2.glRotatef(90+motion_now.angle_1,0,1,0);
-			gl2.glColor3f(0,1,0);
-			PrimitiveSolids.drawCylinder(gl2,3.2f,3.2f);
-			
-			// bicep
-			gl2.glColor3f(0,0,1);
-			//PrimitiveSolids.drawBox(gl2,3,3,SHOULDER_TO_ELBOW);
-			gl2.glPushMatrix();
-			gl2.glTranslatef(a1.x/2,a1.y/2,a1.z/2);
-			gl2.glRotatef(90,1,0,0);
-			PrimitiveSolids.drawCylinder(gl2, SHOULDER_TO_ELBOW/2.0f, 3.0f*0.575f);
-			gl2.glPopMatrix();
-	
-			// elbow
-			gl2.glTranslatef(a1.x,a1.y,a1.z);
-			gl2.glRotatef(180-motion_now.angle_2-motion_now.angle_1,0,1,0);
-			gl2.glColor3f(0,1,0);
-			PrimitiveSolids.drawCylinder(gl2,2.2f,2.2f);
-			gl2.glColor3f(0,0,1);
-			//PrimitiveSolids.drawBox(gl2,2,2,ELBOW_TO_WRIST);
-	
-			// forearm
-			gl2.glPushMatrix();
-			gl2.glTranslatef(a2.x/2,a2.y/2,a2.z/2);
-			gl2.glRotatef(90,1,0,0);
-			PrimitiveSolids.drawCylinder(gl2, ELBOW_TO_WRIST/2.0f, 1.15f);
-			gl2.glPopMatrix();
-	
-			// wrist
-			gl2.glTranslatef(a2.x,a2.y,a2.z);
-			gl2.glRotatef(-motion_now.angle_3,a2.x,a2.y,a2.z);
-			gl2.glRotatef(motion_now.angle_4,0,1,0);
-			gl2.glRotatef(-180+motion_now.angle_2,0,1,0);
-			gl2.glColor3f(0,1,0);
-			PrimitiveSolids.drawCylinder(gl2,1.2f,1.2f);
-			gl2.glColor3f(0,0,1);
-			//PrimitiveSolids.drawBox(gl2,1,1,WRIST_TO_FINGER);
-	
-			// finger tip
-			gl2.glPushMatrix();
-			gl2.glTranslatef(a3.x/2,a3.y/3,a3.z/2);
-			gl2.glRotatef(90,1,0,0);
-			PrimitiveSolids.drawCylinder(gl2, WRIST_TO_FINGER/2.0f, 1.0f*0.575f);
-			gl2.glPopMatrix();
-	
-			gl2.glTranslatef(a3.x,a3.y,a3.z);	
-			gl2.glRotatef(motion_now.angle_5,a3.x,a3.y,a3.z);
-			//gl2.glRotatef(-motion_now.angle_3,a2.x,a2.y,a2.z);
-			//gl2.glRotatef(motion_now.angle_4,0,1,0);
-			//gl2.glRotatef(-180+motion_now.angle_2,0,1,0);
-			gl2.glRotatef(-90,0,1,0);
-			// draw finger tip orientation
-			gl2.glDisable(GL2.GL_LIGHTING);
-			gl2.glBegin(GL2.GL_LINES);
-			gl2.glColor3f(1,0,1);  // magenta
-			gl2.glVertex3f(0,0,0);
-			gl2.glVertex3f(HOME_RIGHT_X,HOME_RIGHT_Y,HOME_RIGHT_Z);
-			gl2.glColor3f(0,1,0);  // green
-			gl2.glVertex3f(0,0,0);
-			gl2.glVertex3f(HOME_FORWARD_X,HOME_FORWARD_Y,HOME_FORWARD_Z);
-			gl2.glEnd();
-			gl2.glEnable(GL2.GL_LIGHTING);
-			// TODO draw tool here
-			gl2.glPopMatrix();
+			gl2.glEnable(GL2.GL_DEPTH_TEST);
 		}
 	}
 
@@ -943,7 +1066,6 @@ extends RobotWithSerialConnection {
 		//gl2.glEnable(GL2.GL_LIGHTING);
 		
 		// TODO draw tool here
-		
 	}
 	
 	

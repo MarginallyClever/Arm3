@@ -29,13 +29,17 @@
 #define ELBOW_TO_WRIST       (25.0)
 #define WRIST_TO_FINGER      (4.0)
 #define FINGER_TO_FLOOR      (0.5)
-#define NUM_AXIES            (6)
 #define STEP_MICROSTEPPING   (16.0)  // microstepping
 #define MOTOR_STEPS_PER_TURN (400.0)
 #define GEAR_RATIO           (5.0)
 #define STEPS_PER_TURN       (MOTOR_STEPS_PER_TURN * STEP_MICROSTEPPING * GEAR_RATIO)
 
 // arduino pins for motor control
+#define MOTHERBOARD 1  // RUMBA
+#define MOTHERBOARD 2  // RAMPS 1.4
+
+#if MOTHERBOARD == 1  // RUMBA
+#define NUM_AXIES        (6)
 #define MOTOR_0_DIR_PIN  (16)
 #define MOTOR_0_STEP_PIN (17)
 #define MOTOR_1_DIR_PIN  (47)
@@ -48,6 +52,19 @@
 #define MOTOR_4_STEP_PIN (26)
 #define MOTOR_5_DIR_PIN  (28)
 #define MOTOR_5_STEP_PIN (29)
+#endif
+
+#if MOTHERBOARD == 2  // RAMPS 1.4
+#define NUM_AXIES        (4)
+#define MOTOR_0_DIR_PIN  (55)
+#define MOTOR_0_STEP_PIN (54)
+#define MOTOR_1_DIR_PIN  (61)
+#define MOTOR_1_STEP_PIN (60)
+#define MOTOR_2_DIR_PIN  (48)
+#define MOTOR_2_STEP_PIN (46)
+#define MOTOR_3_DIR_PIN  (28)
+#define MOTOR_3_STEP_PIN (26)
+#endif
 
 
 // split long lines into pieces to make them more correct.
@@ -350,8 +367,12 @@ void line(float newx,float newy,float newz) {
   digitalWrite( MOTOR_1_DIR_PIN, a[1].dir );
   digitalWrite( MOTOR_2_DIR_PIN, a[2].dir );
   digitalWrite( MOTOR_3_DIR_PIN, a[3].dir );
+#if NUM_AXIES >= 4
   digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
+#endif
+#if NUM_AXIES >= 5
   digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
+#endif
   
 #if VERBOSE > 3
   Serial.print("\t");  Serial.print(g_step_count);
@@ -388,6 +409,7 @@ void line(float newx,float newy,float newz) {
       over[3] -= steps_total;
       digitalWrite(MOTOR_3_STEP_PIN,HIGH);
     }
+#if NUM_AXIES >= 4
     // M4
     over[4] += delta[4];
     if(over[4] >= steps_total) {
@@ -395,6 +417,8 @@ void line(float newx,float newy,float newz) {
       over[4] -= steps_total;
       digitalWrite(MOTOR_4_STEP_PIN,HIGH);
     }
+#endif
+#if NUM_AXIES >= 5
     // M5
     over[5] += delta[5];
     if(over[5] >= steps_total) {
@@ -402,6 +426,7 @@ void line(float newx,float newy,float newz) {
       over[5] -= steps_total;
       digitalWrite(MOTOR_5_STEP_PIN,HIGH);
     }
+#endif
     
     ++g_step_count;
     if(g_step_count<g_accel_until) {

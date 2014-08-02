@@ -29,41 +29,43 @@ void motor_onestep(int motor_id,int dir) {
 
 void motor_setup() {
   // set up the pins
-  motors[0].step_pin=17;
-  motors[0].dir_pin=16;
-  motors[0].enable_pin=48;
-  motors[0].limit_switch_pin=37;
+  motors[0].step_pin=MOTOR_0_STEP_PIN;
+  motors[0].dir_pin=MOTOR_0_DIR_PIN;
+  motors[0].enable_pin=MOTOR_0_ENABLE_PIN;
+  motors[0].limit_switch_pin=MOTOR_0_LIMIT_PIN;
   motors[0].flip=-1;
 
-  motors[1].step_pin=54;
-  motors[1].dir_pin=47;
-  motors[1].enable_pin=55;
-  motors[1].limit_switch_pin=36;
+  motors[1].step_pin=MOTOR_1_STEP_PIN;
+  motors[1].dir_pin=MOTOR_1_DIR_PIN;
+  motors[1].enable_pin=MOTOR_1_ENABLE_PIN;
+  motors[1].limit_switch_pin=MOTOR_1_LIMIT_PIN;
   motors[1].flip=-1;
 
-  motors[2].step_pin=57;
-  motors[2].dir_pin=56;
-  motors[2].enable_pin=62;
-  motors[2].limit_switch_pin=35;
+  motors[2].step_pin=MOTOR_2_STEP_PIN;
+  motors[2].dir_pin=MOTOR_2_DIR_PIN;
+  motors[2].enable_pin=MOTOR_2_ENABLE_PIN;
+  motors[2].limit_switch_pin=MOTOR_2_LIMIT_PIN;
   motors[2].flip=1;
 
-  motors[3].step_pin=23;
-  motors[3].dir_pin=22;
-  motors[3].enable_pin=27;
-  motors[3].limit_switch_pin=34;
+  motors[3].step_pin=MOTOR_3_STEP_PIN;
+  motors[3].dir_pin=MOTOR_3_DIR_PIN;
+  motors[3].enable_pin=MOTOR_3_ENABLE_PIN;
+  motors[3].limit_switch_pin=MOTOR_3_LIMIT_PIN;
   motors[3].flip=1;
-
-  motors[4].step_pin=26;
-  motors[4].dir_pin=25;
-  motors[4].enable_pin=24;
-  motors[4].limit_switch_pin=33;
+#if NUM_AXIES > 3
+  motors[4].step_pin=MOTOR_4_STEP_PIN;
+  motors[4].dir_pin=MOTOR_4_DIR_PIN;
+  motors[4].enable_pin=MOTOR_4_ENABLE_PIN;
+  motors[4].limit_switch_pin=MOTOR_4_LIMIT_PIN;
   motors[4].flip=1;
-
-  motors[5].step_pin=29;
-  motors[5].dir_pin=28;
-  motors[5].enable_pin=39;
-  motors[5].limit_switch_pin=32;
+#endif
+#if NUM_AXIES > 4
+  motors[5].step_pin=MOTOR_5_STEP_PIN;
+  motors[5].dir_pin=MOTOR_5_DIR_PIN;
+  motors[5].enable_pin=MOTOR_5_ENABLE_PIN;
+  motors[5].limit_switch_pin=MOTOR_5_LIMIT_PIN;
   motors[5].flip=1;
+#endif
   
   for(int i=0;i<NUM_AXIES;++i) {  
     // set the motor pin & scale
@@ -151,6 +153,121 @@ void find_home() {
   Serial.println(F("Found home."));
 }
 
+/**
+ * Uses bresenham's line algorithm to move both motors
+ * @input newx the destination x position
+ * @input newy the destination y position
+ **/
+void line(float newx,float newy,float newz) {
+  a[0].delta = newx-px;
+  a[1].delta = newy-py;
+  a[2].delta = newz-pz;
+  
+  long i,j,steps_total=0;
+  long delta[NUM_AXIES];
+  long over[NUM_AXIES];
+
+  for(i=0;i<NUM_AXIES;++i) {
+    delta[i] = abs(a[i].delta);
+    a[i].dir = ( a[i].delta * motors[i].flip ) > 0 ? LOW : HIGH;
+    if( steps_total < delta[i] ) steps_total = delta[i];
+    over[i]=0;
+  }
+  
+
+#if VERBOSE > 1
+  Serial.print("Total steps=");
+  Serial.println(steps_total);
+  Serial.println(F("Start >"));
+#endif
+
+  digitalWrite( MOTOR_0_DIR_PIN, a[0].dir );
+  digitalWrite( MOTOR_1_DIR_PIN, a[1].dir );
+  digitalWrite( MOTOR_2_DIR_PIN, a[2].dir );
+  digitalWrite( MOTOR_3_DIR_PIN, a[3].dir );
+#if NUM_AXIES >= 4
+  digitalWrite( MOTOR_4_DIR_PIN, a[4].dir );
+#endif
+#if NUM_AXIES >= 5
+  digitalWrite( MOTOR_5_DIR_PIN, a[5].dir );
+#endif
+  
+#if VERBOSE > 3
+  Serial.print("\t");  Serial.print(g_step_count);
+  Serial.print("\t");  Serial.print(step_delay_us);
+  Serial.print("\n");
+#endif
+  
+  for( i=0; i<steps_total; ++i ) {
+    // M0
+    over[0] += delta[0];
+    if(over[0] >= steps_total) {
+      digitalWrite(MOTOR_0_STEP_PIN,LOW);
+      over[0] -= steps_total;
+      digitalWrite(MOTOR_0_STEP_PIN,HIGH);
+    }
+    // M1
+    over[1] += delta[1];
+    if(over[1] >= steps_total) {
+      digitalWrite(MOTOR_1_STEP_PIN,LOW);
+      over[1] -= steps_total;
+      digitalWrite(MOTOR_1_STEP_PIN,HIGH);
+    }
+    // M2
+    over[2] += delta[2];
+    if(over[2] >= steps_total) {
+      digitalWrite(MOTOR_2_STEP_PIN,LOW);
+      over[2] -= steps_total;
+      digitalWrite(MOTOR_2_STEP_PIN,HIGH);
+    }
+    // M3
+    over[3] += delta[3];
+    if(over[3] >= steps_total) {
+      digitalWrite(MOTOR_3_STEP_PIN,LOW);
+      over[3] -= steps_total;
+      digitalWrite(MOTOR_3_STEP_PIN,HIGH);
+    }
+#if NUM_AXIES >= 4
+    // M4
+    over[4] += delta[4];
+    if(over[4] >= steps_total) {
+      digitalWrite(MOTOR_4_STEP_PIN,LOW);
+      over[4] -= steps_total;
+      digitalWrite(MOTOR_4_STEP_PIN,HIGH);
+    }
+#endif
+#if NUM_AXIES >= 5
+    // M5
+    over[5] += delta[5];
+    if(over[5] >= steps_total) {
+      digitalWrite(MOTOR_5_STEP_PIN,LOW);
+      over[5] -= steps_total;
+      digitalWrite(MOTOR_5_STEP_PIN,HIGH);
+    }
+#endif
+    
+    ++g_step_count;
+    if(g_step_count<g_accel_until) {
+      step_delay_us -= DEFAULT_ACCEL;
+    }
+    if(g_step_count>=g_decel_after) {
+      step_delay_us += DEFAULT_ACCEL;
+    }
+    pause_efficient();
+    
+#if VERBOSE > 2
+    Serial.println(i);
+#endif
+  }
+
+  px=newx;
+  py=newy;
+  pz=newz;
+
+#if VERBOSE > 1
+  Serial.println(F("< Done."));
+#endif
+}
 
 /**
 * This file is part of Arm3.

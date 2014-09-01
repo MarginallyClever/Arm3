@@ -1,3 +1,6 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
 //------------------------------------------------------------------------------
 // Arm3 - Three Axis Robot Arm based on code from 6 Axis CNC Demo v2
 // dan@marginallycelver.com 2014-03-23
@@ -17,10 +20,13 @@
 
 // speeds & acceleration control
 #define MIN_STEP_DELAY       (100) // fastest the motors can move
-#define MAX_FEEDRATE         (1000000/MIN_STEP_DELAY)
-#define MIN_FEEDRATE         (0.01)
-#define DEFAULT_FEEDRATE     (200)
-#define DEFAULT_ACCEL        (40)   // how much to accelerate/decelerate
+#define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
+#define MIN_FEEDRATE         (1500)
+#define DEFAULT_FEEDRATE     (8000.0)
+#define DEFAULT_ACCELERATION (20)   // how much to accelerate/decelerate
+
+// related to number of instructions that can be buffered.  must be a power of two > 1.
+#define MAX_SEGMENTS         (32)
 
 // machine dimensions
 #define BASE_TO_SHOULDER_X   (5.37)  // measured in solidworks
@@ -39,7 +45,7 @@
 //#define MOTHERBOARD 2  // RAMPS 1.4
 
 #if MOTHERBOARD == 1  // RUMBA
-#define NUM_AXIES          (6)
+#define NUM_AXIES          (3)
 
 
 #define MOTOR_0_DIR_PIN    (16)
@@ -129,6 +135,19 @@
 
 #define MAX_TOOLS            (6)
 
+// timer stuff
+#define CLOCK_FREQ           (16000000L)
+#define MAX_COUNTER          (65536L)
+
+
+// optimize code, please
+#define FORCE_INLINE         __attribute__((always_inline)) inline
+
+
+#ifndef CRITICAL_SECTION_START
+  #define CRITICAL_SECTION_START  unsigned char _sreg = SREG;  cli();
+  #define CRITICAL_SECTION_END    SREG = _sreg;
+#endif //CRITICAL_SECTION_START
 
 
 //------------------------------------------------------------------------------
@@ -142,9 +161,11 @@
 //------------------------------------------------------------------------------
 // for line()
 typedef struct {
-  long delta;
-  long over;
+  int step_count;
+  int delta;
+  int absdelta;
   int dir;
+  float delta_normalized;
 } Axis;
 
 
@@ -160,11 +181,25 @@ typedef struct {
 
 typedef struct {
   Axis a[NUM_AXIES];
-  long steps;
-  long steps_left;
-  long feed_rate;
+  int steps_total;
+  int steps_taken;
+  int accel_until;
+  int decel_after;
+  float feed_rate_max;
+  float feed_rate_start;
+  float feed_rate_start_max;
+  float feed_rate_end;
+  char nominal_length_flag;
+  char recalculate_flag;
+  char busy;
 } Segment;
 
+
+extern Segment line_segments[MAX_SEGMENTS];
+extern Segment *working_seg;
+extern volatile int current_segment;
+extern volatile int last_segment;
+extern float acceleration;
 
 
 /**
@@ -183,3 +218,4 @@ typedef struct {
 * You should have received a copy of the GNU General Public License
 * along with Foobar. If not, see <http://www.gnu.org/licenses/>.
 */
+#endif

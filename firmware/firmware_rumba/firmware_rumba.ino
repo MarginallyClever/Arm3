@@ -25,28 +25,20 @@ char *motor_names="XYZABC";
 char buffer[MAX_BUF];  // where we store the message until we get a ';'
 int sofar;  // how much is in the buffer
 
+long line_number=0;
 
 float px, py, pz;  // step count
 float ox, oy, oz;  // reported position
 
 // speeds
-float fr=0;  // human version
-long step_delay;  // milliseconds
-long step_delay_ms;  // milliseconds
-long step_delay_us;  // microseconds
+float feed_rate=DEFAULT_FEEDRATE;  // how fast the EE moves in cm/s
+float acceleration=DEFAULT_ACCELERATION;
 
 // settings
 char mode_abs=1;  // absolute mode?
 
 Vector3 tool_offset[MAX_TOOLS];
 int current_tool=0;
-
-// for acceleration
-long g_accel_until;
-long g_decel_after;
-long g_step_count;
-
-long g_start_delay;
 
 
 //------------------------------------------------------------------------------
@@ -64,9 +56,9 @@ void pause(long ms) {
 }
 
 
-void pause_efficient() {
-  if(step_delay_ms>0) delay(step_delay_ms);
-  delayMicroseconds(step_delay_us);
+// force this thread to do nothing until all the queued segments are processed.
+void wait_for_segment_buffer_to_empty() {
+  while( current_segment != last_segment );
 }
 
 
@@ -74,27 +66,24 @@ void pause_efficient() {
  * Set the feedrate (speed motors will move)
  * @input nfr the new speed in steps/second
  */
-void set_feedrate(float nfr) {
-  if(fr==nfr) return;  // same as last time?  quit now.
+float feedrate(float nfr) {
+  if(feed_rate==nfr) return nfr;  // same as last time?  quit now.
 
-  if(nfr>MAX_FEEDRATE || nfr<MIN_FEEDRATE) {  // don't allow crazy feed rates
-    Serial.print(F("New feedrate must be greater than "));
-    Serial.print(MIN_FEEDRATE);
-    Serial.print(F("steps/s and less than "));
+  if(nfr>MAX_FEEDRATE) {
+    Serial.print(F("Feedrate set to maximum ("));
     Serial.print(MAX_FEEDRATE);
-    Serial.println(F("steps/s."));
-    return;
+    Serial.println(F("steps/s)"));
+    nfr=MAX_FEEDRATE;
   }
+  if(nfr<MIN_FEEDRATE) {  // don't allow crazy feed rates
+    Serial.print(F("Feedrate set to minimum ("));
+    Serial.print(MIN_FEEDRATE);
+    Serial.println(F("steps/s)"));
+    nfr=MIN_FEEDRATE;
+  }
+  feed_rate=nfr;
   
-  step_delay = 1000000.0/nfr;
-  if( step_delay < 10000 ) {
-    step_delay_us = step_delay % 10000;
-    step_delay_ms = 0;
-  } else {
-    step_delay_us = step_delay % 1000;
-    step_delay_ms = step_delay / 1000;
-  }
-  fr=nfr;
+  return feed_rate;
 }
 
 
@@ -108,6 +97,7 @@ void set_position(float npx,float npy,float npz) {
   ox=npx;
   oy=npy;
   oz=npz;
+  IK(ox,oy,oz,px,py,pz);
 }
 
 
@@ -212,15 +202,15 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
 
 
 
-void arm_line(float x,float y,float z) {
+void arm_line(float x,float y,float z,float feed_rate) {
   float a,b,c;
   IK(x,y,z,a,b,c);
   set_position(x,y,z);
-  line(a,b,c);
+  motor_prepare_segment(a,b,c,feed_rate);
 }
 
 
-void line_safe(float x,float y,float z) {
+void line_safe(float x,float y,float z,float feed_rate) {
   x -= tool_offset[current_tool].x;
   y -= tool_offset[current_tool].y;
   z -= tool_offset[current_tool].z;
@@ -229,108 +219,29 @@ void line_safe(float x,float y,float z) {
   float dx=x-ox;
   float dy=y-oy;
   float dz=z-oz;
-/*
-  Serial.print("dx ");  Serial.println(dx);
-  Serial.print("dy ");  Serial.println(dy);
-  Serial.print("dz ");  Serial.println(dz);
 
-  Serial.print("posx ");  Serial.println(posx);
-  Serial.print("posy ");  Serial.println(posy);
-  Serial.print("posz ");  Serial.println(posz);
-*/
   float len=sqrt(dx*dx+dy*dy+dz*dz);
-#if VERBOSE > 2
-  Serial.print("LEN ");  Serial.println(len);
-#endif
+  long pieces=floor(len * CM_PER_SEGMENT);
 
-  long pieces=floor(len/CM_PER_SEGMENT);
-#if VERBOSE > 2
-  Serial.print("pieces ");  Serial.println(pieces);
-#endif
-
-  long original_delay = step_delay_us;
-  step_delay_us = g_start_delay;
-  
   float x0=ox;
   float y0=oy;
   float z0=oz;
   float a;
   long j;
   
-  float a0=px,b0=py,c0=pz;
-  float a1,b1,c1;
-  long ta,tb,tc;
-  long total_steps=0;
-
-  // count total steps
-  for(j=1;j<=pieces;++j) {
-    a=(float)j/(float)pieces;
-    IK(dx*a+x0,
-       dy*a+y0,
-       dz*a+z0,
-       a1,b1,c1);
-    ta=abs(a1-a0);
-    tb=abs(b1-b0);
-    tc=abs(c1-c0);
-    a0=a1;
-    b0=b1;
-    c0=c1;
-    
-    if( ta > tb ) {
-      if( ta > tc ) total_steps += ta;
-      else total_steps += tc;
-    } else if( tb > tc ) {
-      total_steps += tb;
-    } else {
-      total_steps += tc;
-    }
-    
-#if VERBOSE > 3
-    Serial.print(a1); Serial.print("\t");  
-    Serial.print(b1); Serial.print("\t");  
-    Serial.print(c1); Serial.print("\t"); 
-    Serial.print(ta); Serial.print("\t");  
-    Serial.print(tb); Serial.print("\t");  
-    Serial.print(tc); Serial.print("\n");  
-#endif
-  }
-
-  // find steps to accelerate and decelerate
-  long max_accel_steps = abs( step_delay_us - original_delay ) / DEFAULT_ACCEL;
-  if( max_accel_steps > total_steps/2 ) {
-    max_accel_steps = total_steps/2;
-  }
-  g_accel_until = max_accel_steps;
-  g_decel_after = total_steps - max_accel_steps;
-  g_step_count=0;
-  
-#if VERBOSE > 3
-  Serial.print("max=");  Serial.println(total_steps);
-  Serial.print("total=");  Serial.println(total_steps);
-  Serial.print("until=");  Serial.println(g_accel_until);
-  Serial.print("after=");  Serial.println(g_decel_after);
-  Serial.print("now=");  Serial.println(step_delay_us);
-#endif
-  
   for(j=1;j<pieces;++j) {
     a=(float)j/(float)pieces;
 
     arm_line(dx*a+x0,
              dy*a+y0,
-             dz*a+z0);  // should accelerate if possible?
+             dz*a+z0,
+             feed_rate);
   }
-  arm_line(x,y,z);
-  
-#if VERBOSE > 3
-  Serial.print("now=");  Serial.println(step_delay_us);
-#endif
-
-  // just in case
-  step_delay_us = original_delay;
+  arm_line(x,y,z,feed_rate);
 }
 
 
-void arc_safe(float x,float y,float z,float cx,float cy,int dir) {
+void arc_safe(float x,float y,float z,float cx,float cy,int dir,float feed_rate) {
     // get radius
   float dx = ox - cx;
   float dy = oy - cy;
@@ -365,10 +276,10 @@ void arc_safe(float x,float y,float z,float cx,float cy,int dir) {
     ny = cy + sin(angle3) * radius;
     nz = ( z - oz ) * scale + oz;
     // send it to the planner
-    line_safe(nx,ny,nz);
+    line_safe(nx,ny,nz,feed_rate);
   }
   
-  line_safe(x,y,z);
+  line_safe(x,y,z,feed_rate);
 }
 
 
@@ -436,7 +347,8 @@ void where() {
   output("X",offset.x);
   output("Y",offset.y);
   output("Z",offset.z);
-  output("F",fr);
+  output("F",feed_rate);
+  output("A",acceleration);
   Serial.println(mode_abs?"ABS":"REL");
 } 
 
@@ -471,31 +383,74 @@ void help() {
 /**
  * Read the input buffer and find any recognized commands.  One G or M command per line.
  */
-void processCommand() {
-  int cmd = parsenumber('G',-1);
+void parser_processCommand() {
+  // blank lines
+  if(buffer[0]==';') return;
+  
+  long cmd;
+  
+  // is there a line number?
+  cmd=parsenumber('N',-1);
+  if(cmd!=-1 && buffer[0]=='N') {  // line number must appear first on the line
+    if( cmd != line_number ) {
+      // wrong line number error
+      Serial.print(F("BADLINENUM "));
+      Serial.println(line_number);
+      return;
+    }
+  
+    // is there a checksum?
+    if(strchr(buffer,'*')!=0) {
+      // yes.  is it valid?
+      char checksum=0;
+      int c=0;
+      while(buffer[c]!='*') checksum ^= buffer[c++];
+      c++; // skip *
+      int against = strtod(buffer+c,NULL);
+      if( checksum != against ) {
+        Serial.print(F("BADCHECKSUM "));
+        Serial.println(line_number);
+        return;
+      } 
+    } else {
+      Serial.print(F("NOCHECKSUM "));
+      Serial.println(line_number);
+      return;
+    }
+    
+    line_number++;
+  }
+  
+  cmd = parsenumber('G',-1);
   switch(cmd) {
   case  0: 
   case  1: { // line
-    set_feedrate(parsenumber('F',fr));
+    acceleration = min(max(parsenumber('A',acceleration),1),2000);
     Vector3 offset=get_end_plus_offset();
     line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
-               parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z) );
+               parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
+               feedrate(parsenumber('F',feed_rate)) );
     break;
   }
   case  2:
   case  3: {  // arc
-    set_feedrate(parsenumber('F',fr));
+    acceleration = min(max(parsenumber('A',acceleration),1),2000);
     Vector3 offset=get_end_plus_offset();
     arc_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
               parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
               parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
               parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
               parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
-              (cmd==2) );  // direction
+              (cmd==2),
+              feedrate(parsenumber('F',feed_rate)) );  // direction
     break;
   }
-  case  4:  pause(parsenumber('P',0)*1000000);  break;  // dwell
+  case  4:  {  // dwell
+    wait_for_segment_buffer_to_empty();
+    pause(parsenumber('S',0) + parsenumber('P',0)*1000);  
+    break;
+  }
   case 28:  find_home();  break;
   case 54:
   case 55:
@@ -516,7 +471,6 @@ void processCommand() {
     set_position( parsenumber('X',offset.x),
                   parsenumber('Y',offset.y),
                   parsenumber('Z',offset.z) );
-    IK(ox,oy,oz,px,py,pz);
     break;
   }
   default:  break;
@@ -552,7 +506,7 @@ void processCommand() {
 /**
  * prepares the input buffer to receive a new message and tells the serial connected device it is ready for more.
  */
-void ready() {
+void parser_ready() {
   sofar=0;  // clear input buffer
   Serial.print(F(">"));  // signal ready to receive input
 }
@@ -574,15 +528,12 @@ void setup() {
   Serial.begin(BAUD);  // open coms
 
   motor_setup();
+  segment_setup();
   tools_setup();
   
-  set_feedrate(DEFAULT_FEEDRATE);  // set default speed
-  g_start_delay = step_delay_us;
-  
   set_position(HOME_X,HOME_Y,HOME_Z);  // set staring position
-  IK(ox,oy,oz,px,py,pz);
   help();  // say hello
-  ready();
+  parser_ready();
 }
 
 
@@ -595,15 +546,18 @@ void loop() {
     char c=Serial.read();  // get it
     Serial.print(c);  // repeat it back so I know you got the message
     if(sofar<MAX_BUF) buffer[sofar++]=c;  // store it
-    if(buffer[sofar-1]==';') break;  // entire message received
-  }
+    if(c=='\n') {
+      buffer[sofar]=0;  // end the buffer so string functions work right
+      //Serial.print(F("\r\n"));  // echo a return character for humans
+      parser_processCommand();  // do something with the command
 
-  if(sofar>0 && buffer[sofar-1]==';') {
-    // we got a message and it ends with a semicolon
-    buffer[sofar]=0;  // end the buffer so string functions work right
-    Serial.print(F("\r\n"));  // echo a return character for humans
-    processCommand();  // do something with the command
-    ready();
+#ifdef ONE_COMMAND_AT_A_TIME
+      wait_for_segment_buffer_to_empty();
+#endif
+
+      parser_ready();
+      break;
+    }
   }
 }
 

@@ -23,10 +23,13 @@
 #define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (1500)
 #define DEFAULT_FEEDRATE     (8000.0)
-#define DEFAULT_ACCELERATION (20)   // how much to accelerate/decelerate
+#define DEFAULT_ACCELERATION (4)   // how much to accelerate/decelerate
 
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
+// split long lines into pieces to make them more correct.
+#define MM_PER_SEGMENT       (3)
+#define MAX_TOOLS            (6)
 
 // machine dimensions
 #define BASE_TO_SHOULDER_X   (5.37)  // measured in solidworks
@@ -45,7 +48,7 @@
 //#define MOTHERBOARD 2  // RAMPS 1.4
 
 #if MOTHERBOARD == 1  // RUMBA
-#define NUM_AXIES          (3)
+#define NUM_AXIES          (3)  // can go up to 6
 
 
 #define MOTOR_0_DIR_PIN    (16)
@@ -80,7 +83,7 @@
 #endif
 
 #if MOTHERBOARD == 2  // RAMPS 1.4
-#define NUM_AXIES          (4)
+#define NUM_AXIES          (3)  // can go up to 4.
 
 #define MOTOR_0_DIR_PIN    (55)
 #define MOTOR_0_STEP_PIN   (54)
@@ -104,8 +107,6 @@
 
 
 
-// split long lines into pieces to make them more correct.
-#define CM_PER_SEGMENT       (0.5)
 
 
 // math defines
@@ -120,8 +121,8 @@
 
 // calibration settings
 //*
-//#define HOME_X               (13.3)
 #define HOME_Y               (0)
+//#define HOME_X               (13.3)
 //#define HOME_Z               (23.91+FINGER_TO_FLOOR)
 #define HOME_X               (12.850)  // WAS 13.05
 #define HOME_Z               (22.2)
@@ -133,13 +134,12 @@
 #define HOME_Z -0.5
 //*/
 
-#define MAX_TOOLS            (6)
 
+// time passed with no instruction?  Make sure PC knows we are waiting.
+#define TIMEOUT_OK           (1000)
 // timer stuff
 #define CLOCK_FREQ           (16000000L)
 #define MAX_COUNTER          (65536L)
-
-
 // optimize code, please
 #define FORCE_INLINE         __attribute__((always_inline)) inline
 

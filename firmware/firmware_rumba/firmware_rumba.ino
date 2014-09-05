@@ -21,12 +21,6 @@ Axis atemp;  // for line()
 Motor motors[NUM_AXIES];
 char *motor_names="XYZABC";
 
-
-char buffer[MAX_BUF];  // where we store the message until we get a ';'
-int sofar;  // how much is in the buffer
-
-long line_number=0;
-
 float px, py, pz;  // step count
 float ox, oy, oz;  // reported position
 
@@ -53,12 +47,6 @@ int current_tool=0;
 void pause(long ms) {
   delay(ms/1000);
   delayMicroseconds(ms%1000);  // delayMicroseconds doesn't work for values > ~16k.
-}
-
-
-// force this thread to do nothing until all the queued segments are processed.
-void wait_for_segment_buffer_to_empty() {
-  while( current_segment != last_segment );
 }
 
 
@@ -97,7 +85,9 @@ void set_position(float npx,float npy,float npz) {
   ox=npx;
   oy=npy;
   oz=npz;
-  IK(ox,oy,oz,px,py,pz);
+  float a,b,c;
+  IK(ox,oy,oz,a,b,c);
+  motor_set_step_count(a,b,c);
 }
 
 
@@ -170,10 +160,10 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   temp.Normalize();
   float bx = temp | arm_plane;
   float by = temp.z;
-  angle_0 = atan2(by,bx);
+  angle_0 = -atan2(by,bx);
   
   // the easiest part
-  angle_2 = atan2(y,x);
+  angle_2 = -atan2(y,x);
 
   // angles are now in radians
   
@@ -192,56 +182,52 @@ int IK(float x, float y,float z,float &angle_0,float &angle_1,float &angle_2) {
   Serial.print("\n");
 #endif
 
-  angle_0 *= -STEPS_PER_TURN/TWOPI;
+  angle_0 *= STEPS_PER_TURN/TWOPI;
   angle_1 *= STEPS_PER_TURN/TWOPI;
-  angle_2 *= -STEPS_PER_TURN/TWOPI;
+  angle_2 *= STEPS_PER_TURN/TWOPI;
 
   return 0;
 }
 
 
-
-
-void arm_line(float x,float y,float z,float feed_rate) {
+void arm_line(float x,float y,float z,float new_feed_rate) {
   float a,b,c;
   IK(x,y,z,a,b,c);
-  set_position(x,y,z);
-  motor_prepare_segment(a,b,c,feed_rate);
+  ox=x;
+  oy=y;
+  oz=z;
+  feed_rate = new_feed_rate;
+  segment_prepare(a,b,c,new_feed_rate);
 }
 
 
-void line_safe(float x,float y,float z,float feed_rate) {
-  x -= tool_offset[current_tool].x;
-  y -= tool_offset[current_tool].y;
-  z -= tool_offset[current_tool].z;
+void line_safe(float x,float y,float z,float new_feed_rate) {
+  x-=tool_offset[current_tool].x;
+  y-=tool_offset[current_tool].y;
+  z-=tool_offset[current_tool].z;
   
   // split up long lines to make them straighter?
-  float dx=x-ox;
-  float dy=y-oy;
-  float dz=z-oz;
-
-  float len=sqrt(dx*dx+dy*dy+dz*dz);
-  long pieces=floor(len * CM_PER_SEGMENT);
-
-  float x0=ox;
-  float y0=oy;
-  float z0=oz;
+  Vector3 destination(x,y,z);
+  Vector3 start(ox,oy,oz);
+  Vector3 dp = destination - start;
+  Vector3 temp;
+  
+  float len=dp.Length();
+  int pieces = ceil(dp.Length() * (float)MM_PER_SEGMENT );
+  
   float a;
   long j;
   
   for(j=1;j<pieces;++j) {
     a=(float)j/(float)pieces;
-
-    arm_line(dx*a+x0,
-             dy*a+y0,
-             dz*a+z0,
-             feed_rate);
+    temp = dp * a + start;
+    arm_line(temp.x,temp.y,temp.z,new_feed_rate);
   }
-  arm_line(x,y,z,feed_rate);
+  arm_line(x,y,z,new_feed_rate);
 }
 
 
-void arc_safe(float x,float y,float z,float cx,float cy,int dir,float feed_rate) {
+void arc_safe(float x,float y,float z,float cx,float cy,int dir,float new_feed_rate) {
     // get radius
   float dx = ox - cx;
   float dy = oy - cy;
@@ -263,7 +249,7 @@ void arc_safe(float x,float y,float z,float cx,float cy,int dir,float feed_rate)
   // simplifies to
   float len = abs(theta) * radius;
 
-  int i, segments = floor( len / CM_PER_SEGMENT );
+  int i, segments = floor( len * (float)MM_PER_SEGMENT );
  
   float nx, ny, nz, angle3, scale;
 
@@ -276,41 +262,21 @@ void arc_safe(float x,float y,float z,float cx,float cy,int dir,float feed_rate)
     ny = cy + sin(angle3) * radius;
     nz = ( z - oz ) * scale + oz;
     // send it to the planner
-    line_safe(nx,ny,nz,feed_rate);
+    line_safe(nx,ny,nz,new_feed_rate);
   }
   
-  line_safe(x,y,z,feed_rate);
+  line_safe(x,y,z,new_feed_rate);
 }
 
 
-/**
- * Look for character /code/ in the buffer and read the float that immediately follows it.
- * @return the value found.  If nothing is found, /val/ is returned.
- * @input code the character to look for.
- * @input val the return value if /code/ is not found.
- **/
-float parsenumber(char code,float val) {
-  char *ptr=buffer;
-  while(ptr && *ptr && ptr<buffer+sofar) {
-    if(*ptr==code) {
-      return atof(ptr+1);
-    }
-    ptr=strchr(ptr,' ')+1;
-  }
-  return val;
-} 
-
-
-void tool_set_offset(int axis,float x,float y,float z) {
-  tool_offset[axis].x=x;
-  tool_offset[axis].y=y;
-  tool_offset[axis].z=z;
-  Serial.print('X');
-  Serial.print(x);
-  Serial.print(" Y");
-  Serial.print(y);
-  Serial.print(" Z");
-  Serial.println(z);
+void tool_set_offset(int tool_id,float x,float y,float z) {
+  tool_offset[tool_id].x=x;
+  tool_offset[tool_id].y=y;
+  tool_offset[tool_id].z=z;
+  output("T",tool_id);
+  output("X",x);
+  output("Y",y);
+  output("Z",z);
 }
 
 
@@ -325,6 +291,7 @@ void tool_change(int tool_id) {
   if(tool_id < 0) tool_id=0;
   if(tool_id > MAX_TOOLS) tool_id=MAX_TOOLS;
   current_tool=tool_id;
+  output("T",current_tool);
 }
 
 
@@ -348,6 +315,7 @@ void where() {
   output("Y",offset.y);
   output("Z",offset.z);
   output("F",feed_rate);
+  output("T",current_tool);
   output("A",acceleration);
   Serial.println(mode_abs?"ABS":"REL");
 } 
@@ -380,138 +348,6 @@ void help() {
 }
 
 
-/**
- * Read the input buffer and find any recognized commands.  One G or M command per line.
- */
-void parser_processCommand() {
-  // blank lines
-  if(buffer[0]==';') return;
-  
-  long cmd;
-  
-  // is there a line number?
-  cmd=parsenumber('N',-1);
-  if(cmd!=-1 && buffer[0]=='N') {  // line number must appear first on the line
-    if( cmd != line_number ) {
-      // wrong line number error
-      Serial.print(F("BADLINENUM "));
-      Serial.println(line_number);
-      return;
-    }
-  
-    // is there a checksum?
-    if(strchr(buffer,'*')!=0) {
-      // yes.  is it valid?
-      char checksum=0;
-      int c=0;
-      while(buffer[c]!='*') checksum ^= buffer[c++];
-      c++; // skip *
-      int against = strtod(buffer+c,NULL);
-      if( checksum != against ) {
-        Serial.print(F("BADCHECKSUM "));
-        Serial.println(line_number);
-        return;
-      } 
-    } else {
-      Serial.print(F("NOCHECKSUM "));
-      Serial.println(line_number);
-      return;
-    }
-    
-    line_number++;
-  }
-  
-  cmd = parsenumber('G',-1);
-  switch(cmd) {
-  case  0: 
-  case  1: { // line
-    acceleration = min(max(parsenumber('A',acceleration),1),2000);
-    Vector3 offset=get_end_plus_offset();
-    line_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
-               parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
-               parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
-               feedrate(parsenumber('F',feed_rate)) );
-    break;
-  }
-  case  2:
-  case  3: {  // arc
-    acceleration = min(max(parsenumber('A',acceleration),1),2000);
-    Vector3 offset=get_end_plus_offset();
-    arc_safe( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
-              parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
-              parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
-              parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
-              parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
-              (cmd==2),
-              feedrate(parsenumber('F',feed_rate)) );  // direction
-    break;
-  }
-  case  4:  {  // dwell
-    wait_for_segment_buffer_to_empty();
-    pause(parsenumber('S',0) + parsenumber('P',0)*1000);  
-    break;
-  }
-  case 28:  find_home();  break;
-  case 54:
-  case 55:
-  case 56:
-  case 57:
-  case 58:
-  case 59: {  // 54-59 tool offsets
-    int tool_id=cmd-54;
-    tool_set_offset(tool_id,parsenumber('X',tool_offset[tool_id].x),
-                            parsenumber('Y',tool_offset[tool_id].y),
-                            parsenumber('Z',tool_offset[tool_id].z));
-    break;
-  }
-  case 90:  mode_abs=1;  break;  // absolute mode
-  case 91:  mode_abs=0;  break;  // relative mode
-  case 92:  { // set logical position
-    Vector3 offset = get_end_plus_offset();
-    set_position( parsenumber('X',offset.x),
-                  parsenumber('Y',offset.y),
-                  parsenumber('Z',offset.z) );
-    break;
-  }
-  default:  break;
-  }
-
-  cmd = parsenumber('M',-1);
-  switch(cmd) {
-  case 6:  tool_change(parsenumber('T',0));  break;
-  case 17:  motor_enable();  break;
-  case 18:  motor_disable();  break;
-  case 100:  help();  break;
-  case 114:  where();  break;
-  case 1000:  EEPROM_SetGUID(parsenumber('U',0));  break;
-  case 1001:  
-  case 1002:  
-  case 1003:  
-  case 1004:  
-  case 1005:  
-  case 1006:  {
-    int id=cmd-1000;
-    int dir=parsenumber('D',1)==1?1:-1;
-    for(int i=0;i<STEPS_PER_TURN;i++) {
-      motor_onestep(id,dir);
-      delay(5);
-    }
-    break;
-  }
-  default:  break;
-  }
-}
-
-
-/**
- * prepares the input buffer to receive a new message and tells the serial connected device it is ready for more.
- */
-void parser_ready() {
-  sofar=0;  // clear input buffer
-  Serial.print(F(">"));  // signal ready to receive input
-}
-
-
 void tools_setup() {
   for(int i=0;i<MAX_TOOLS;++i) {
     tool_offset[i].Set(0,0,0);
@@ -541,24 +377,7 @@ void setup() {
  * After setup() this machine will repeat loop() forever.
  */
 void loop() {
-  // listen for serial commands
-  while(Serial.available() > 0) {  // if something is available
-    char c=Serial.read();  // get it
-    Serial.print(c);  // repeat it back so I know you got the message
-    if(sofar<MAX_BUF) buffer[sofar++]=c;  // store it
-    if(c=='\n') {
-      buffer[sofar]=0;  // end the buffer so string functions work right
-      //Serial.print(F("\r\n"));  // echo a return character for humans
-      parser_processCommand();  // do something with the command
-
-#ifdef ONE_COMMAND_AT_A_TIME
-      wait_for_segment_buffer_to_empty();
-#endif
-
-      parser_ready();
-      break;
-    }
-  }
+  parser_listen();
 }
 
 

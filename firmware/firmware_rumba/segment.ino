@@ -456,19 +456,12 @@ void segment_prepare(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
   new_seg.feed_rate_max = new_feed_rate;
 
-  output("Ax",n0);
-  output("Ay",n1);
-  output("Az",n2);
-  output("Bx",old_seg.a[0].step_count);
-  output("By",old_seg.a[1].step_count);
-  output("Bz",old_seg.a[2].step_count);
-
   // the axis that has the most steps will control the overall acceleration
   new_seg.steps_total = 0;
   float len = 0;
   int i;
   for(i=0;i<NUM_AXIES;++i) {
-    new_seg.a[i].dir = (new_seg.a[i].delta*motors[0].flip<0 ? HIGH : LOW);
+    new_seg.a[i].dir = ( new_seg.a[i].delta * motors[0].flip < 0 ? HIGH : LOW );
     new_seg.a[i].absdelta = abs(new_seg.a[i].delta);
     len += new_seg.a[i].absdelta * new_seg.a[i].absdelta;
     if( new_seg.steps_total < new_seg.a[i].absdelta ) {

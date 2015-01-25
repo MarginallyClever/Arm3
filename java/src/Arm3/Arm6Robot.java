@@ -293,7 +293,7 @@ extends RobotWithSerialConnection {
 		
 		up.cross(forward,right);
 		
-		Vector3f of = new Vector3f(forward);
+		//Vector3f of = new Vector3f(forward);
 		Vector3f or = new Vector3f(right);
 		Vector3f ou = new Vector3f(up);
 		
@@ -788,7 +788,7 @@ extends RobotWithSerialConnection {
 		
 		up.cross(forward,right);
 		
-		Vector3f of = new Vector3f(forward);
+		//Vector3f of = new Vector3f(forward);
 		Vector3f or = new Vector3f(right);
 		Vector3f ou = new Vector3f(up);
 		

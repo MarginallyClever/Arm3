@@ -44,7 +44,7 @@ public class Arm3
 implements ActionListener, GLEventListener
 {
 	static final long serialVersionUID=1;
-	static final String version="1";
+	static final String version="2";
     static Arm3 __singleton;
 
 	World world;

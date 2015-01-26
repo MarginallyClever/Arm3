@@ -639,7 +639,7 @@ extends RobotWithSerialConnection {
 		else		 update_fk(delta);
 		
 		// before the robot is allowed to do anything it has to be homed
-		if(this.isConfirmed) {
+		if(this.IsConfirmed()) {
 			if(!homed) {
 				if(!homing) {
 					// we are not homed and we have not begun to home

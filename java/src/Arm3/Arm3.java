@@ -27,6 +27,7 @@ import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.glu.GLU;
 
 import Generators.GcodeGenerator;
+import Generators.LoadGCodeGenerator;
 import Generators.HilbertCurveGenerator;
 import Generators.YourMessageHereGenerator;
 
@@ -50,9 +51,10 @@ implements ActionListener, GLEventListener
 	World world;
 
 	/** menus */
-	JMenuBar mainMenu;
-	JMenuItem buttonAbout, buttonCheckForUpdate;
-	JMenuItem buttonQuit;
+	private JMenuBar mainMenu;
+    private JMenuItem buttonStart, buttonStartAt, buttonPause, buttonHalt;
+    private JMenuItem buttonAbout, buttonCheckForUpdate;
+    private JMenuItem buttonQuit;
 	
 	/* window management */
     final JFrame frame; 
@@ -135,22 +137,51 @@ implements ActionListener, GLEventListener
 	
 	protected void LoadGenerators() {
 		// TODO find the generator jar files and load them.
-		generators = new GcodeGenerator[2];
-		generators[0] = new HilbertCurveGenerator();
+		generators = new GcodeGenerator[3];
+		generators[0] = new LoadGCodeGenerator();
 		generators[1] = new YourMessageHereGenerator();
+		generators[2] = new HilbertCurveGenerator();
 		
-		generatorButtons = new JMenuItem[2];
+		generatorButtons = new JMenuItem[generators.length];
 	}
 	
 	protected JMenu LoadGenerateMenu() {
-		JMenu menu = new JMenu("Generate");
-        //menu.setEnabled(!running);
+		JMenu menu = new JMenu("Gcode");
+        menu.setEnabled(!world.robot0.IsRunning());
         
         for(int i=0;i<generators.length;++i) {
         	generatorButtons[i] = new JMenuItem(generators[i].GetMenuName());
         	generatorButtons[i].addActionListener(this);
         	menu.add(generatorButtons[i]);
         }
+        
+        return menu;
+	}
+
+	
+	public JMenu LoadDrawMenu() {
+        // Draw menu
+        JMenu menu = new JMenu("Action");
+
+        buttonStart = new JMenuItem("Start",KeyEvent.VK_S);
+        buttonStart.addActionListener(this);
+    	buttonStart.setEnabled(world.robot0.IsConfirmed() && !world.robot0.IsRunning());
+        menu.add(buttonStart);
+
+        buttonStartAt = new JMenuItem("Start at...");
+        buttonStartAt.addActionListener(this);
+        buttonStartAt.setEnabled(world.robot0.IsConfirmed() && !world.robot0.IsRunning());
+        menu.add(buttonStartAt);
+
+        buttonPause = new JMenuItem("Pause");
+        buttonPause.addActionListener(this);
+        buttonPause.setEnabled(world.robot0.IsConfirmed() && world.robot0.IsRunning());
+        menu.add(buttonPause);
+
+        buttonHalt = new JMenuItem(("Halt"),KeyEvent.VK_H);
+        buttonHalt.addActionListener(this);
+        buttonHalt.setEnabled(world.robot0.IsConfirmed() && world.robot0.IsRunning());
+        menu.add(buttonHalt);
         
         return menu;
 	}
@@ -161,7 +192,7 @@ implements ActionListener, GLEventListener
 		
         JMenu menu = new JMenu("RobotTrainer");
         
-	        buttonAbout = new JMenuItem("About",KeyEvent.VK_A);
+            buttonAbout = new JMenuItem("About",KeyEvent.VK_A);
 	        buttonAbout.getAccessibleContext().setAccessibleDescription("About this program");
 	        buttonAbout.addActionListener(this);
 	        menu.add(buttonAbout);
@@ -180,6 +211,8 @@ implements ActionListener, GLEventListener
         mainMenu.add(world.updateMenu());
 
         mainMenu.add(LoadGenerateMenu());
+        
+        mainMenu.add(LoadDrawMenu());
 	}
 	
 	
@@ -228,6 +261,29 @@ implements ActionListener, GLEventListener
 			System.exit(0);
 			return;
 		}
+		
+		
+		if(GeneratorMenuAction(e)) {
+			return;
+		}
+		
+		// Draw
+		if( subject == buttonStart ) {
+			world.robot0.Start();
+			return;
+		}
+		if( subject == buttonStartAt ) {
+			world.robot0.StartAt();
+			return;
+			
+		}
+		if( subject == buttonPause ) {
+			world.robot0.Pause();
+		}
+		if( subject == buttonHalt ) {
+			world.robot0.Halt();
+			return;
+		}
 	}
 
 	protected void LoadConfig() {
@@ -245,6 +301,7 @@ implements ActionListener, GLEventListener
         for(int i=0;i<generators.length;++i) {
         	if(subject==generatorButtons[i]) {
         		generators[i].Generate();
+        		updateMenu();
         		return true;
         	}
 		}

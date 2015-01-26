@@ -1,12 +1,21 @@
 package Arm3;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
 
 
 public class RobotWithSerialConnection extends SerialConnection
 implements SerialConnectionReadyListener {
 	//comms	
-	boolean arduinoReady=false;
-	boolean isConfirmed=false;
+	private boolean arduinoReady=false;
+	private boolean isConfirmed=false;
 
 	// sending file to the robot
 	private boolean running=false;
@@ -15,7 +24,15 @@ implements SerialConnectionReadyListener {
 	private long linesProcessed=0;
 	private boolean fileOpened=false;
 	private ArrayList<String> gcode;
+	
+	private boolean dialog_result;  // so dialog boxes can return an ok/cancel
 
+	
+	public boolean IsRunning() { return running; }
+	public boolean IsPaused() { return paused; }
+	public boolean IsFileOpen() { return fileOpened; }
+	
+	public boolean IsConfirmed() { return isConfirmed; }
 	
 	public RobotWithSerialConnection(String name) {
 		super(name);
@@ -70,7 +87,78 @@ implements SerialConnectionReadyListener {
 	    linesProcessed=0;
 	}
 
+	public void Start() {
+		paused=false;
+		running=true;
+		SendFileCommand();
+	}
 	
+	public void StartAt() {
+		if(fileOpened && !running) {
+			linesProcessed=0;
+			if(getStartingLineNumber()) {
+				Start();
+			}
+		}
+	}
+	
+	public void Pause() {
+		if(running) {
+			if(paused==true) {
+				paused=false;
+				// TODO: if the robot is not ready to unpause, this might fail and the program would appear to hang.
+				SendFileCommand();
+			} else {
+				paused=true;
+			}
+		}
+	}
+	
+
+	/**
+	 * open a dialog to ask for the line number.
+	 * @return true if "ok" is pressed, false if the window is closed any other way.
+	 */
+	private boolean getStartingLineNumber() {
+		dialog_result=false;
+		
+		final JDialog driver = new JDialog(Arm3.getSingleton().GetMainFrame(),"Start at...");
+		driver.setLayout(new GridBagLayout());		
+		final JTextField starting_line = new JTextField("0",8);
+		final JButton cancel = new JButton(("Cancel"));
+		final JButton start = new JButton(("Start"));
+		GridBagConstraints c = new GridBagConstraints();
+		c.gridwidth=2;	c.gridx=0;  c.gridy=0;  driver.add(new JLabel(("Start at line")),c);
+		c.gridwidth=2;	c.gridx=2;  c.gridy=0;  driver.add(starting_line,c);
+		c.gridwidth=1;	c.gridx=0;  c.gridy=1;  driver.add(cancel,c);
+		c.gridwidth=1;	c.gridx=2;  c.gridy=1;  driver.add(start,c);
+		
+		ActionListener driveButtons = new ActionListener() {
+			  public void actionPerformed(ActionEvent e) {
+					Object subject = e.getSource();
+					
+					if(subject == start) {
+						linesProcessed=Integer.decode(starting_line.getText());
+						SendLineToRobot("M110 N"+linesProcessed);
+						dialog_result=true;
+						driver.dispose();
+					}
+					if(subject == cancel) {
+						dialog_result=false;
+						driver.dispose();
+					}
+			  }
+		};
+
+		start.addActionListener(driveButtons);
+		cancel.addActionListener(driveButtons);
+	    driver.getRootPane().setDefaultButton(start);
+		driver.pack();
+		driver.setVisible(true);  // modal
+		
+		return dialog_result;
+	}
+
 	/**
 	 * Processes a single instruction meant for the robot.
 	 * @param line

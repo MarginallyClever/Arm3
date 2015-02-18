@@ -313,13 +313,13 @@ ISR(TIMER1_COMPA_vect) {
       digitalWrite( MOTOR_0_DIR_PIN, working_seg->a[0].dir );
       digitalWrite( MOTOR_1_DIR_PIN, working_seg->a[1].dir );
       digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
-#if NUM_AXIES >=4
+#if NUM_AXIES >3
       digitalWrite( MOTOR_3_DIR_PIN, working_seg->a[3].dir );
 #endif
-#if NUM_AXIES >=5
+#if NUM_AXIES >4
       digitalWrite( MOTOR_4_DIR_PIN, working_seg->a[4].dir );
 #endif
-#if NUM_AXIES >=6
+#if NUM_AXIES >5
       digitalWrite( MOTOR_5_DIR_PIN, working_seg->a[5].dir );
 #endif
 
@@ -333,13 +333,13 @@ ISR(TIMER1_COMPA_vect) {
       delta[0] = working_seg->a[0].absdelta;
       delta[1] = working_seg->a[1].absdelta;
       delta[2] = working_seg->a[2].absdelta;
-#if NUM_AXIES >=4
+#if NUM_AXIES >3
       delta[3] = working_seg->a[3].absdelta;
 #endif
-#if NUM_AXIES >=5
+#if NUM_AXIES >4
       delta[4] = working_seg->a[4].absdelta;
 #endif
-#if NUM_AXIES >=6
+#if NUM_AXIES >5
       delta[5] = working_seg->a[5].absdelta;
 #endif
       memset(over,0,sizeof(int)*NUM_AXIES);
@@ -376,7 +376,7 @@ ISR(TIMER1_COMPA_vect) {
         over[2] -= steps_total;
         digitalWrite(MOTOR_2_STEP_PIN,HIGH);
       }
-#if NUM_AXIES >=4
+#if NUM_AXIES >3
       // M3
       over[3] += delta[3];
       if(over[3] >= steps_total) {
@@ -385,7 +385,7 @@ ISR(TIMER1_COMPA_vect) {
         digitalWrite(MOTOR_3_STEP_PIN,HIGH);
       }
 #endif
-#if NUM_AXIES >=5
+#if NUM_AXIES >4
       // M4
       over[4] += delta[4];
       if(over[4] >= steps_total) {
@@ -394,7 +394,7 @@ ISR(TIMER1_COMPA_vect) {
         digitalWrite(MOTOR_4_STEP_PIN,HIGH);
       }
 #endif
-#if NUM_AXIES >=6
+#if NUM_AXIES >5
       // M5
       over[5] += delta[5];
       if(over[5] >= steps_total) {

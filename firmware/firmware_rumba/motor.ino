@@ -50,19 +50,21 @@ void motor_setup() {
   motors[2].limit_switch_pin=MOTOR_2_LIMIT_PIN;
   motors[2].flip=1;
 
+#if NUM_AXIES > 3
   motors[3].step_pin=MOTOR_3_STEP_PIN;
   motors[3].dir_pin=MOTOR_3_DIR_PIN;
   motors[3].enable_pin=MOTOR_3_ENABLE_PIN;
   motors[3].limit_switch_pin=MOTOR_3_LIMIT_PIN;
   motors[3].flip=-1;
-#if NUM_AXIES > 3
+#endif
+#if NUM_AXIES > 4
   motors[4].step_pin=MOTOR_4_STEP_PIN;
   motors[4].dir_pin=MOTOR_4_DIR_PIN;
   motors[4].enable_pin=MOTOR_4_ENABLE_PIN;
   motors[4].limit_switch_pin=MOTOR_4_LIMIT_PIN;
   motors[4].flip=1;
 #endif
-#if NUM_AXIES > 4
+#if NUM_AXIES > 5
   motors[5].step_pin=MOTOR_5_STEP_PIN;
   motors[5].dir_pin=MOTOR_5_DIR_PIN;
   motors[5].enable_pin=MOTOR_5_ENABLE_PIN;

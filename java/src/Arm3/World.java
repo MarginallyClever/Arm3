@@ -4,7 +4,8 @@ import java.awt.event.ActionListener;
 
 
 import com.jogamp.newt.event.MouseEvent;
-import com.jogamp.newt.event.KeyEvent;
+
+import java.awt.event.KeyEvent;
 
 import javax.media.opengl.GL2;
 import javax.swing.JMenu;

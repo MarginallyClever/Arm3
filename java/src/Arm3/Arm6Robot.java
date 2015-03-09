@@ -3,7 +3,7 @@ package Arm3;
 import javax.vecmath.Vector3f;
 import javax.media.opengl.GL2;
 
-import com.jogamp.newt.event.KeyEvent;
+import java.awt.event.KeyEvent;
 
 
 public class Arm6Robot 

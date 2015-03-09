@@ -5,6 +5,8 @@ import java.awt.BorderLayout;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.io.BufferedReader;
@@ -27,7 +29,6 @@ import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLPipelineFactory;
 import javax.media.opengl.GLProfile;
-import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.awt.GLJPanel;
 import javax.media.opengl.glu.GLU;
 
@@ -36,13 +37,14 @@ import Generators.LoadGCodeGenerator;
 import Generators.HilbertCurveGenerator;
 import Generators.YourMessageHereGenerator;
 
-import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.MouseAdapter;
 import com.jogamp.newt.event.MouseEvent;
-import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
 import com.jogamp.opengl.util.Animator;
+
+//import com.jogamp.newt.event.awt.AWTKeyAdapter;
+//import com.jogamp.newt.event.KeyEvent;
+import java.awt.event.KeyEvent;
 
 
 
@@ -81,7 +83,9 @@ implements ActionListener, GLEventListener
     
 	
 	final GLJPanel glcanvas;
+	final JPanel right_panel;
 	final JSplitPane splitter;
+	final JButton a,b,c;
 	
 	
 	public static void main(String[] argv) {
@@ -112,9 +116,10 @@ implements ActionListener, GLEventListener
 
 
         world = new World();
+
         mainMenu = new JMenuBar();
-        updateMenu();
         frame.setJMenuBar(mainMenu);
+        updateMenu();
 
         
         final Animator animator = new Animator();
@@ -136,19 +141,58 @@ implements ActionListener, GLEventListener
         animator.add(glcanvas);
         glcanvas.addGLEventListener(this);
         
-        final JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.add(new JButton("One"));
-        panel.add(new JButton("Two"));
-        panel.add(new JButton("Three"));
+        a=new JButton("One");
+		b=new JButton("Two");
+		c=new JButton("Three");
+        right_panel = new JPanel();
+        right_panel.setLayout(new BoxLayout(right_panel, BoxLayout.Y_AXIS));
+        right_panel.add(a);
+        right_panel.add(b);
+        right_panel.add(c);
+        a.addActionListener(this);
+        b.addActionListener(this);
+        c.addActionListener(this);
+        
+        
 
         splitter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitter.add(glcanvas);
-        splitter.add(panel);
+        splitter.add(right_panel);
 		splitter.setResizeWeight(0.9);
 		splitter.setDividerLocation(0.9);
         
+		frame.addKeyListener(new KeyListener() {
+			@Override
+			public void keyPressed(java.awt.event.KeyEvent e) {
+            	world.keyPressed(e);
+			}
+
+			@Override
+			public void keyReleased(java.awt.event.KeyEvent e) {
+				world.keyReleased(e);				
+			}
+
+			@Override
+			public void keyTyped(java.awt.event.KeyEvent e) {
+				// TODO Auto-generated method stub
+			}
+        });
+
+		frame.setFocusable(true);
+		frame.requestFocusInWindow();
         
+		frame.addFocusListener(new FocusListener(){
+            public void focusGained(FocusEvent e){
+                System.out.println("Focus GAINED:"+e);
+            }
+            public void focusLost(FocusEvent e){
+                System.out.println("Focus LOST:"+e);
+
+                // FIX FOR GNOME/XWIN FOCUS BUG
+                e.getComponent().requestFocus();
+            }
+        });
+		
         frame.add( splitter, BorderLayout.CENTER );
         frame.validate();
         frame.setVisible(true);
@@ -236,7 +280,9 @@ implements ActionListener, GLEventListener
         mainMenu.add(LoadGenerateMenu());
         
         mainMenu.add(LoadDrawMenu());
-	}
+        
+        mainMenu.updateUI();
+    }
 	
 	
 	public void CheckForUpdate() {
@@ -306,6 +352,15 @@ implements ActionListener, GLEventListener
 		if( subject == buttonHalt ) {
 			world.robot0.Halt();
 			return;
+		}
+		if( subject == a ) {
+			JOptionPane.showMessageDialog(null, "A","Click", JOptionPane.INFORMATION_MESSAGE);
+		}
+		if( subject == b ) {
+			JOptionPane.showMessageDialog(null, "B","Click", JOptionPane.INFORMATION_MESSAGE);
+		}
+		if( subject == c ) {
+			JOptionPane.showMessageDialog(null, "C","Click", JOptionPane.INFORMATION_MESSAGE);
 		}
 	}
 
@@ -443,16 +498,16 @@ implements ActionListener, GLEventListener
 
 		// MouseListener gearsMouse = new TraceMouseAdapter(new GearsMouseAdapter());
 		MouseAdapter gearsMouse = new GearsMouseAdapter();
-		KeyAdapter gearsKeys = new GearsKeyAdapter();
+		//KeyAdapter gearsKeys = new GearsKeyAdapter();
 		
 		if (drawable instanceof Window) {
 			Window window = (Window) drawable;
 			window.addMouseListener((MouseListener)gearsMouse);
-			window.addKeyListener((KeyListener)gearsKeys);
+			//window.addKeyListener((KeyListener)gearsKeys);
 		} else if (GLProfile.isAWTAvailable() && drawable instanceof java.awt.Component) {
 			java.awt.Component comp = (java.awt.Component) drawable;
 			new AWTMouseAdapter(gearsMouse).addTo(comp);
-			new AWTKeyAdapter(gearsKeys).addTo(comp);
+			//new AWTKeyAdapter(gearsKeys).addTo(comp);
 		}
     }
     
@@ -488,7 +543,7 @@ implements ActionListener, GLEventListener
         world.render( gl2, dt );
     }
 	
-    
+    /*
 	  class GearsKeyAdapter extends KeyAdapter {
 	    public void keyPressed(KeyEvent e) {
 	        world.keyPressed(e);
@@ -497,7 +552,7 @@ implements ActionListener, GLEventListener
 	    	world.keyReleased(e);
 	    }
 	  }
-	  
+	  */
 	  
 	  class GearsMouseAdapter extends MouseAdapter {
 	      public void mousePressed(MouseEvent e) {

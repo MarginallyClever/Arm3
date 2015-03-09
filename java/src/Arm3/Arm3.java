@@ -12,11 +12,15 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.prefs.Preferences;
 
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
@@ -24,6 +28,7 @@ import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLPipelineFactory;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
+import javax.media.opengl.awt.GLJPanel;
 import javax.media.opengl.glu.GLU;
 
 import Generators.GcodeGenerator;
@@ -75,6 +80,10 @@ implements ActionListener, GLEventListener
 	JMenuItem generatorButtons[];
     
 	
+	final GLJPanel glcanvas;
+	final JSplitPane splitter;
+	
+	
 	public static void main(String[] argv) {
 		getSingleton();
 	}
@@ -123,10 +132,24 @@ implements ActionListener, GLEventListener
             }
           });
 
-        final GLCanvas glcanvas = new GLCanvas();
+        glcanvas = new GLJPanel();
         animator.add(glcanvas);
         glcanvas.addGLEventListener(this);
-        frame.add( glcanvas, BorderLayout.CENTER );
+        
+        final JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(new JButton("One"));
+        panel.add(new JButton("Two"));
+        panel.add(new JButton("Three"));
+
+        splitter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitter.add(glcanvas);
+        splitter.add(panel);
+		splitter.setResizeWeight(0.9);
+		splitter.setDividerLocation(0.9);
+        
+        
+        frame.add( splitter, BorderLayout.CENTER );
         frame.validate();
         frame.setVisible(true);
         animator.start();

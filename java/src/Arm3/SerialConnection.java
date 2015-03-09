@@ -114,9 +114,15 @@ implements SerialPortEventListener, ActionListener {
 		
 		String command;
 		try {
-			command=commandQueue.remove(0)+";";
+			command=commandQueue.remove(0);
+			String line = command;
+			if(line.contains(";")) {
+				String [] lines = line.split(";");
+				command = lines[0];
+			}
 			Log(command+NL);
-			serialPort.writeBytes(command.getBytes());
+			line+=NL;
+			serialPort.writeBytes(line.getBytes());
 			waitingForCue=true;
 		}
 		catch(IndexOutOfBoundsException e1) {}

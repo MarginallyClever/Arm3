@@ -3,7 +3,7 @@ import javax.vecmath.Vector3f;
 import javax.media.opengl.GL2;
 
 import java.awt.event.KeyEvent;
-import com.jogamp.newt.event.MouseEvent;
+import java.awt.event.MouseEvent;
 
 
 public class Camera {

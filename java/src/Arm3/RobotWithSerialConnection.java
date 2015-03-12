@@ -122,7 +122,7 @@ implements SerialConnectionReadyListener {
 	private boolean getStartingLineNumber() {
 		dialog_result=false;
 		
-		final JDialog driver = new JDialog(Arm3.getSingleton().GetMainFrame(),"Start at...");
+		final JDialog driver = new JDialog(MainGUI.getSingleton().GetMainFrame(),"Start at...");
 		driver.setLayout(new GridBagLayout());		
 		final JTextField starting_line = new JTextField("0",8);
 		final JButton cancel = new JButton(("Cancel"));

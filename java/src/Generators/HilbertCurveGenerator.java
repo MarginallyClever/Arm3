@@ -13,7 +13,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
-import Arm3.Arm3;
+import Arm3.MainGUI;
 
 // source http://introcs.cs.princeton.edu/java/32class/Hilbert.java.html
 public class HilbertCurveGenerator implements GcodeGenerator {
@@ -36,7 +36,7 @@ public class HilbertCurveGenerator implements GcodeGenerator {
 	
 	
 	public void Generate() {
-		final JDialog driver = new JDialog(Arm3.getSingleton().GetMainFrame(),"Your Message Here",true);
+		final JDialog driver = new JDialog(MainGUI.getSingleton().GetMainFrame(),"Your Message Here",true);
 		driver.setLayout(new GridLayout(0,1));
 
 		final JTextField field_size = new JTextField(Integer.toString((int)xmax));
@@ -134,7 +134,7 @@ public class HilbertCurveGenerator implements GcodeGenerator {
 	        output.close();
 	        
 			// open the file automatically to save a click.
-			Arm3.getSingleton().OpenFile(outputFile);
+			MainGUI.getSingleton().OpenFile(outputFile);
 		}
 		catch(IOException ex) {}
 	}

@@ -8,10 +8,20 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.prefs.Preferences;
 
 import javax.swing.BoxLayout;
@@ -37,9 +47,6 @@ import Generators.LoadGCodeGenerator;
 import Generators.HilbertCurveGenerator;
 import Generators.YourMessageHereGenerator;
 
-import com.jogamp.newt.event.MouseAdapter;
-import com.jogamp.newt.event.MouseEvent;
-import com.jogamp.newt.event.awt.AWTMouseAdapter;
 import com.jogamp.opengl.util.Animator;
 
 //import com.jogamp.newt.event.awt.AWTKeyAdapter;
@@ -48,12 +55,12 @@ import java.awt.event.KeyEvent;
 
 
 
-public class Arm3 
-implements ActionListener, GLEventListener
+public class MainGUI 
+implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, KeyListener
 {
 	static final long serialVersionUID=1;
 	static final String version="2";
-    static Arm3 __singleton;
+    static MainGUI __singleton;
 
 	World world;
 
@@ -88,13 +95,11 @@ implements ActionListener, GLEventListener
 	final JButton a,b,c;
 	
 	
-	public static void main(String[] argv) {
-		getSingleton();
-	}
 	
-	
-	static public Arm3 getSingleton() {
-		if(__singleton==null) __singleton = new Arm3();
+	static public MainGUI getSingleton() {
+		if(__singleton==null) {
+			__singleton = new MainGUI();
+		}
 		return __singleton;
 	}
 	
@@ -104,8 +109,18 @@ implements ActionListener, GLEventListener
 	}
 	
 	
-	protected Arm3() {
+	protected MainGUI() {
 		prefs = Preferences.userRoot().node("GcodeSender");
+/*
+		try {
+			String s = getPath(this.getClass());
+			System.out.println("enumerating "+s);
+			EnumerateJarContents(s);
+		}
+		catch(IOException e) {
+			System.out.println("failed to enumerate");
+		}
+*/
 		
 		LoadConfig();
 		LoadGenerators();
@@ -141,6 +156,7 @@ implements ActionListener, GLEventListener
         animator.add(glcanvas);
         glcanvas.addGLEventListener(this);
         
+        
         a=new JButton("One");
 		b=new JButton("Two");
 		c=new JButton("Three");
@@ -160,27 +176,14 @@ implements ActionListener, GLEventListener
         splitter.add(right_panel);
 		splitter.setResizeWeight(0.9);
 		splitter.setDividerLocation(0.9);
-        
-		frame.addKeyListener(new KeyListener() {
-			@Override
-			public void keyPressed(java.awt.event.KeyEvent e) {
-            	world.keyPressed(e);
-			}
-
-			@Override
-			public void keyReleased(java.awt.event.KeyEvent e) {
-				world.keyReleased(e);				
-			}
-
-			@Override
-			public void keyTyped(java.awt.event.KeyEvent e) {
-				// TODO Auto-generated method stub
-			}
-        });
-
+		frame.addKeyListener(this);
+		glcanvas.addMouseListener(this);
+		glcanvas.addMouseMotionListener(this);
 		frame.setFocusable(true);
 		frame.requestFocusInWindow();
-        
+
+		// focus not returning after modal dialog boxes
+		// http://stackoverflow.com/questions/5150964/java-keylistener-does-not-listen-after-regaining-focus
 		frame.addFocusListener(new FocusListener(){
             public void focusGained(FocusEvent e){
                 System.out.println("Focus GAINED:"+e);
@@ -201,9 +204,57 @@ implements ActionListener, GLEventListener
         last_time = start_time = System.currentTimeMillis();
     }
 	
+	private String getPath(Class cls) {
+	    String cn = cls.getName();
+	    //System.out.println("cn "+cn);
+	    String rn = cn.replace('.', '/') + ".class";
+	    //System.out.println("rn "+rn);
+	    String path = getClass().getClassLoader().getResource(rn).getPath();
+	    //System.out.println("path "+path);
+	    int ix = path.indexOf("!");
+	    if(ix >= 0) {
+	        path = path.substring(0, ix);
+	    }
+	    return path;
+	}
+	
+	protected void EnumerateJarContents(String absPathToJarFile) throws IOException {
+	    JarFile jarFile = new JarFile(absPathToJarFile);
+	    Enumeration<JarEntry> e = jarFile.entries();
+	    while (e.hasMoreElements()) {
+			_EnumerateJarContents(e.nextElement());
+		}
+	}
+	
+	private static void _EnumerateJarContents(Object obj) {
+       JarEntry entry = (JarEntry)obj;
+       String name = entry.getName();
+       long size = entry.getSize();
+       long compressedSize = entry.getCompressedSize();
+       System.out.println(name + "\t" + size + "\t" + compressedSize);
+     }
+	
+	/**
+	 * Load a class from a Jar file.
+	 * @param absPathToJarFile c:\some\path\myfile.jar
+	 * @param className like com.mypackage.myclass
+	 */
+	protected void LoadClasses(String absPathToJarFile,String className) {
+		File file  = new File(absPathToJarFile);
+		try {
+			URL url = file.toURI().toURL();  
+			URL[] urls = new URL[]{url};
+			ClassLoader cl = new URLClassLoader(urls);
+			Class cls = cl.loadClass(className);
+		}
+		catch(MalformedURLException e) {}
+		catch(ClassNotFoundException e) {}
+	}
+	
 	
 	protected void LoadGenerators() {
 		// TODO find the generator jar files and load them.
+		
 		generators = new GcodeGenerator[3];
 		generators[0] = new LoadGCodeGenerator();
 		generators[1] = new YourMessageHereGenerator();
@@ -495,20 +546,7 @@ implements ActionListener, GLEventListener
             } catch (Exception e) {e.printStackTrace();}
         }
 
-
-		// MouseListener gearsMouse = new TraceMouseAdapter(new GearsMouseAdapter());
-		MouseAdapter gearsMouse = new GearsMouseAdapter();
-		//KeyAdapter gearsKeys = new GearsKeyAdapter();
-		
-		if (drawable instanceof Window) {
-			Window window = (Window) drawable;
-			window.addMouseListener((MouseListener)gearsMouse);
-			//window.addKeyListener((KeyListener)gearsKeys);
-		} else if (GLProfile.isAWTAvailable() && drawable instanceof java.awt.Component) {
-			java.awt.Component comp = (java.awt.Component) drawable;
-			new AWTMouseAdapter(gearsMouse).addTo(comp);
-			//new AWTKeyAdapter(gearsKeys).addTo(comp);
-		}
+        
     }
     
     
@@ -543,28 +581,46 @@ implements ActionListener, GLEventListener
         world.render( gl2, dt );
     }
 	
-    /*
-	  class GearsKeyAdapter extends KeyAdapter {
-	    public void keyPressed(KeyEvent e) {
-	        world.keyPressed(e);
-	    }
-	    public void keyReleased(KeyEvent e) {
-	    	world.keyReleased(e);
-	    }
-	  }
-	  */
-	  
-	  class GearsMouseAdapter extends MouseAdapter {
-	      public void mousePressed(MouseEvent e) {
-		        world.mousePressed(e);
-	      }
-	        
-	      public void mouseReleased(MouseEvent e) {
-	    	  world.mouseReleased(e);
-	      }
-	        
-	      public void mouseDragged(MouseEvent e) {
-	    	  world.mouseDragged(e);
-	      }
-	  }
+
+	@Override
+	public void keyPressed(java.awt.event.KeyEvent e) {
+    	world.keyPressed(e);
+	}
+
+	@Override
+	public void keyReleased(java.awt.event.KeyEvent e) {
+		world.keyReleased(e);				
+	}
+
+	@Override
+	public void keyTyped(java.awt.event.KeyEvent e) {
+		// TODO Auto-generated method stub
+	}
+	
+	public void mousePressed(MouseEvent e) {
+		world.mousePressed(e);
+    }
+        
+    public void mouseReleased(MouseEvent e) {
+    	world.mouseReleased(e);
+    }
+        
+    public void mouseDragged(MouseEvent e) {
+    	world.mouseDragged(e);
+	}
+    public void mouseMoved(MouseEvent e) {
+    	world.mouseMoved(e);
+	}
+
+    public void mouseClicked(MouseEvent e) {
+    	world.mouseClicked(e);
+    }
+        
+    public void mouseEntered(MouseEvent e) {
+    	world.mouseEntered(e);
+    }
+        
+    public void mouseExited(MouseEvent e) {
+    	world.mouseExited(e);
+    }
 }

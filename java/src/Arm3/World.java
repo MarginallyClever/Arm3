@@ -1,11 +1,8 @@
 package Arm3;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
-
-import com.jogamp.newt.event.MouseEvent;
-
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 import javax.media.opengl.GL2;
 import javax.swing.JMenu;
@@ -97,13 +94,13 @@ implements ActionListener {
 			robot0.DetectSerialPorts();
 			//robot1.arduino.DetectSerialPorts();
 			//TODO tell RobotTrainer to update all menus
-			Arm3.getSingleton().updateMenu();
+			MainGUI.getSingleton().updateMenu();
 			return;
 		}
 		if(subject==buttonDisconnect) {
 			robot0.ClosePort();
 			//robot1.arduino.ClosePort();
-			Arm3.getSingleton().updateMenu();
+			MainGUI.getSingleton().updateMenu();
 			return;
 		}
 	}

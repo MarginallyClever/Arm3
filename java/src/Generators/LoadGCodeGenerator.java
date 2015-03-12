@@ -6,7 +6,7 @@ import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import Arm3.Arm3;
+import Arm3.MainGUI;
 
 // source http://introcs.cs.princeton.edu/java/32class/Hilbert.java.html
 public class LoadGCodeGenerator implements GcodeGenerator {
@@ -29,11 +29,11 @@ public class LoadGCodeGenerator implements GcodeGenerator {
 		//fc.addChoosableFileFilter(filterImage);
 		//fc.addChoosableFileFilter(filterDXF);
 		fc.addChoosableFileFilter(filterGCODE);
-	    if(fc.showOpenDialog(Arm3.getSingleton().GetMainFrame()) == JFileChooser.APPROVE_OPTION) {
+	    if(fc.showOpenDialog(MainGUI.getSingleton().GetMainFrame()) == JFileChooser.APPROVE_OPTION) {
 	    	String selectedFile=fc.getSelectedFile().getAbsolutePath();
 
 			// open the file automatically to save a click.
-			Arm3.getSingleton().OpenFile(selectedFile);
+			MainGUI.getSingleton().OpenFile(selectedFile);
 	    }
 	}
 }

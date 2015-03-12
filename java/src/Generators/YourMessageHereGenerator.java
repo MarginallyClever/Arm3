@@ -21,7 +21,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-import Arm3.Arm3;
+import Arm3.MainGUI;
 
 public class YourMessageHereGenerator implements GcodeGenerator {
 	// machine properties
@@ -61,7 +61,7 @@ public class YourMessageHereGenerator implements GcodeGenerator {
 	
 	
 	public void Generate() {
-		final JDialog driver = new JDialog(Arm3.getSingleton().GetMainFrame(),"Your Message Here",true);
+		final JDialog driver = new JDialog(MainGUI.getSingleton().GetMainFrame(),"Your Message Here",true);
 		driver.setLayout(new GridLayout(0,1));
 
 		final JTextArea text = new JTextArea(lastMessage,40,4);
@@ -92,7 +92,7 @@ public class YourMessageHereGenerator implements GcodeGenerator {
 					lastMessage=text.getText();
 					TextCreateMessageNow(lastMessage);
 					// open the file automatically to save a click.
-					Arm3.getSingleton().OpenFile(outputFile);
+					MainGUI.getSingleton().OpenFile(outputFile);
 					
 					driver.dispose();
 				}

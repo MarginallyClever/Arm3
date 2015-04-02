@@ -1,6 +1,6 @@
 package Arm3;
 
-public class Main {
+public class Arm3 {
 	public static MainGUI gui;
 	
 	public static void main(String[] argv) {

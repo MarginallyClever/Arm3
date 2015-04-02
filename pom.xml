@@ -30,7 +30,7 @@
       <configuration>
         <archive>
           <manifest>
-            <mainClass>Makelangelo.Makelangelo</mainClass>
+            <mainClass>Arm3.Main</mainClass>
           </manifest>
         </archive>
         <descriptorRefs>

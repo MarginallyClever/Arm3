@@ -4,3 +4,5 @@
 *.class
 
 *.classpath
+.DS_Store
+/target/

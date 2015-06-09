@@ -23,7 +23,7 @@
 #define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (1500)
 #define DEFAULT_FEEDRATE     (8000.0)
-#define DEFAULT_ACCELERATION (4)   // how much to accelerate/decelerate
+#define DEFAULT_ACCELERATION (1000)   // how much to accelerate/decelerate
 
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)

@@ -173,10 +173,10 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 		// http://stackoverflow.com/questions/5150964/java-keylistener-does-not-listen-after-regaining-focus
 		frame.addFocusListener(new FocusListener(){
             public void focusGained(FocusEvent e){
-                System.out.println("Focus GAINED:"+e);
+                //System.out.println("Focus GAINED:"+e);
             }
             public void focusLost(FocusEvent e){
-                System.out.println("Focus LOST:"+e);
+                //System.out.println("Focus LOST:"+e);
 
                 // FIX FOR GNOME/XWIN FOCUS BUG
                 e.getComponent().requestFocus();
@@ -512,7 +512,7 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
     @Override
     public void init( GLAutoDrawable drawable ) {
     	// Use debug pipeline
-    	boolean glDebug=true;
+    	boolean glDebug=false;
     	boolean glTrace=false;
     	
         GL gl = drawable.getGL();
@@ -530,8 +530,6 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
                 gl = gl.getContext().setGL( GLPipelineFactory.create("javax.media.opengl.Trace", null, gl, new Object[] { System.err } ) );
             } catch (Exception e) {e.printStackTrace();}
         }
-
-        
     }
     
     

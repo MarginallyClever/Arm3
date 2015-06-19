@@ -439,50 +439,41 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 		}
 
 
+		// CAMERA CONTROLS
 
 		if( subject == buttonFlyUp ) {
-			Vector3f up = new Vector3f(world.camera.up);
-			up.scale(-1);
-			world.camera.position.add(up);
+			world.camera.move_ud= ( world.camera.move_ud==1 ) ? 0 : 1;
 		}
 		if( subject == buttonFlyDown ) {
-			Vector3f up = new Vector3f(world.camera.up);
-			world.camera.position.add(up);
-		
+			world.camera.move_ud= ( world.camera.move_ud==-1 ) ? 0 : -1;
 		}
 		if( subject == buttonFlyLeft ) {
-			Vector3f up = new Vector3f(world.camera.right);
-			world.camera.position.add(up);		
+			world.camera.move_lr= ( world.camera.move_lr==1 ) ? 0 : 1;
 		}
 		if( subject == buttonFlyRight ) {
-			Vector3f up = new Vector3f(world.camera.right);
-			up.scale(-1);
-			world.camera.position.add(up);		
+			world.camera.move_lr= ( world.camera.move_lr==-1 ) ? 0 : -1;
 		}
 		if( subject == buttonFlyForward ) {
-			Vector3f up = new Vector3f(world.camera.forward);
-			world.camera.position.add(up);		
+			world.camera.move_fb= ( world.camera.move_fb==1 ) ? 0 : 1;
 		}
 		if( subject == buttonFlyBackward ) {
-			Vector3f up = new Vector3f(world.camera.forward);
-			up.scale(-1);
-			world.camera.position.add(up);		
+			world.camera.move_fb= ( world.camera.move_fb==-1 ) ? 0 : -1;
 		}
-
 		if( subject == buttonLookDown ) {
-			world.camera.tilt-=1;
-			if(world.camera.tilt < 1) world.camera.tilt = 1;
+			world.camera.tilt_dir= ( world.camera.tilt_dir==-1 ) ? 0 : -1;	
 		}
 		if( subject == buttonLookUp ) {
-			world.camera.tilt+=1;
-			if(world.camera.tilt > 179) world.camera.tilt = 179;		
+			world.camera.tilt_dir= ( world.camera.tilt_dir==1 ) ? 0 : 1;
 		}
 		if( subject == buttonLookLeft ) {
-			world.camera.pan-=1;
+			world.camera.pan_dir= ( world.camera.pan_dir==-1 ) ? 0 : -1;
 		}
 		if( subject == buttonLookRight ) {
-			world.camera.pan+=1;
+			world.camera.pan_dir= ( world.camera.pan_dir==1 ) ? 0 : 1;
 		}
+		
+		
+		// ARM3 controls
 
 		if( subject == arm3modeSwitch ) {
 			world.robot0.moveMode = !world.robot0.moveMode;

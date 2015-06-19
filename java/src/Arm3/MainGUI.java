@@ -1,11 +1,9 @@
 package Arm3;
 
 
-import java.awt.BorderLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -16,7 +14,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.prefs.Preferences;
 
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -25,6 +22,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.vecmath.Vector3f;
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
@@ -77,11 +76,32 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
     
 	
 	final GLJPanel glcanvas;
-	final JPanel right_panel;
-	final JSplitPane splitter;
-	final JButton a,b,c;
+
+    private JPanel cameraPanel=null, arm3Panel=null;
+
+    public JTabbedPane contextMenu;
+    public Splitter split_left_right;
+    
+	private JButton buttonFlyUp;
+	private JButton buttonFlyDown;
+	private JButton buttonFlyLeft;
+	private JButton buttonFlyRight;
+	private JButton buttonFlyForward;
+	private JButton buttonFlyBackward;
 	
+	private JButton buttonLookUp;
+	private JButton buttonLookDown;
+	private JButton buttonLookLeft;
+	private JButton buttonLookRight;
 	
+	private JButton arm3modeSwitch;
+	private JButton arm3Xpos;
+	private JButton arm3Xneg;
+	private JButton arm3Ypos;
+	private JButton arm3Yneg;
+	private JButton arm3Zpos;
+	private JButton arm3Zneg;
+
 	
 	static public MainGUI getSingleton() {
 		if(__singleton==null) {
@@ -93,6 +113,43 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 	
 	public JFrame GetMainFrame() {
 		return frame;
+	}
+	
+	
+	private JButton createButton(String name) {
+		JButton b = new JButton(name);
+		b.addActionListener(this);
+		return b;
+	}
+
+	
+	private void createCameraPanel() {
+		cameraPanel = new JPanel(new GridLayout(0,1));
+		
+		cameraPanel.add(buttonFlyUp = createButton("fly up"));
+		cameraPanel.add(buttonFlyDown = createButton("fly down"));
+		cameraPanel.add(buttonFlyLeft = createButton("fly left"));
+		cameraPanel.add(buttonFlyRight = createButton("fly right"));
+		cameraPanel.add(buttonFlyForward = createButton("fly forward"));
+		cameraPanel.add(buttonFlyBackward = createButton("fly backward"));
+
+		cameraPanel.add(buttonLookUp = createButton("look up"));
+		cameraPanel.add(buttonLookDown = createButton("look down"));
+		cameraPanel.add(buttonLookLeft = createButton("look left"));
+		cameraPanel.add(buttonLookRight = createButton("look right"));
+	}
+	
+	
+	private void createArm3Panel() {
+		arm3Panel = new JPanel(new GridLayout(0,1));
+
+		arm3Panel.add(arm3modeSwitch = createButton("[FK] /  IK "));
+		arm3Panel.add(arm3Xpos = createButton("X+"));
+		arm3Panel.add(arm3Xneg = createButton("X-"));
+		arm3Panel.add(arm3Ypos = createButton("Y+"));
+		arm3Panel.add(arm3Yneg = createButton("Y-"));
+		arm3Panel.add(arm3Zpos = createButton("Z+"));
+		arm3Panel.add(arm3Zneg = createButton("Z-"));
 	}
 	
 	
@@ -112,7 +169,7 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 		LoadConfig();
 		LoadGenerators();
 		
-        frame = new JFrame( "RobotTrainer" ); 
+        frame = new JFrame( "Arm3" ); 
         frame.setSize( 800, 600 );
         frame.setLayout(new java.awt.BorderLayout());
 
@@ -143,32 +200,23 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
         animator.add(glcanvas);
         glcanvas.addGLEventListener(this);
         
-        
-        a=new JButton("One");
-		b=new JButton("Two");
-		c=new JButton("Three");
-        right_panel = new JPanel();
-        right_panel.setLayout(new BoxLayout(right_panel, BoxLayout.Y_AXIS));
-        right_panel.add(a);
-        right_panel.add(b);
-        right_panel.add(c);
-        a.addActionListener(this);
-        b.addActionListener(this);
-        c.addActionListener(this);
-        
-        
+        createCameraPanel();
+        createArm3Panel();
 
-        splitter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitter.add(glcanvas);
-        splitter.add(right_panel);
-		splitter.setResizeWeight(0.9);
-		splitter.setDividerLocation(0.9);
-		frame.addKeyListener(this);
-		glcanvas.addMouseListener(this);
-		glcanvas.addMouseMotionListener(this);
-		frame.setFocusable(true);
-		frame.requestFocusInWindow();
+        contextMenu = new JTabbedPane();
+        contextMenu.addTab("Camera",null,cameraPanel,null);
+        contextMenu.addTab("Arm3",null,arm3Panel,null);
 
+        split_left_right = new Splitter(JSplitPane.HORIZONTAL_SPLIT);
+        split_left_right.add(glcanvas);
+        split_left_right.add(contextMenu);
+        
+//		frame.addKeyListener(this);
+//		glcanvas.addMouseListener(this);
+//		glcanvas.addMouseMotionListener(this);
+//		frame.setFocusable(true);
+//		frame.requestFocusInWindow();
+/*
 		// focus not returning after modal dialog boxes
 		// http://stackoverflow.com/questions/5150964/java-keylistener-does-not-listen-after-regaining-focus
 		frame.addFocusListener(new FocusListener(){
@@ -182,8 +230,8 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
                 e.getComponent().requestFocus();
             }
         });
-		
-        frame.add( splitter, BorderLayout.CENTER );
+		*/
+        frame.add(split_left_right);
         frame.validate();
         frame.setVisible(true);
         animator.start();
@@ -389,14 +437,88 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 			world.robot0.Halt();
 			return;
 		}
-		if( subject == a ) {
-			JOptionPane.showMessageDialog(null, "A","Click", JOptionPane.INFORMATION_MESSAGE);
+
+
+
+		if( subject == buttonFlyUp ) {
+			Vector3f up = new Vector3f(world.camera.up);
+			up.scale(-1);
+			world.camera.position.add(up);
 		}
-		if( subject == b ) {
-			JOptionPane.showMessageDialog(null, "B","Click", JOptionPane.INFORMATION_MESSAGE);
+		if( subject == buttonFlyDown ) {
+			Vector3f up = new Vector3f(world.camera.up);
+			world.camera.position.add(up);
+		
 		}
-		if( subject == c ) {
-			JOptionPane.showMessageDialog(null, "C","Click", JOptionPane.INFORMATION_MESSAGE);
+		if( subject == buttonFlyLeft ) {
+			Vector3f up = new Vector3f(world.camera.right);
+			world.camera.position.add(up);		
+		}
+		if( subject == buttonFlyRight ) {
+			Vector3f up = new Vector3f(world.camera.right);
+			up.scale(-1);
+			world.camera.position.add(up);		
+		}
+		if( subject == buttonFlyForward ) {
+			Vector3f up = new Vector3f(world.camera.forward);
+			world.camera.position.add(up);		
+		}
+		if( subject == buttonFlyBackward ) {
+			Vector3f up = new Vector3f(world.camera.forward);
+			up.scale(-1);
+			world.camera.position.add(up);		
+		}
+
+		if( subject == buttonLookDown ) {
+			world.camera.tilt-=1;
+			if(world.camera.tilt < 1) world.camera.tilt = 1;
+		}
+		if( subject == buttonLookUp ) {
+			world.camera.tilt+=1;
+			if(world.camera.tilt > 179) world.camera.tilt = 179;		
+		}
+		if( subject == buttonLookLeft ) {
+			world.camera.pan-=1;
+		}
+		if( subject == buttonLookRight ) {
+			world.camera.pan+=1;
+		}
+
+		if( subject == arm3modeSwitch ) {
+			world.robot0.moveMode = !world.robot0.moveMode;
+			
+			if(world.robot0.moveMode) {
+				arm3modeSwitch.setText(" FK  / [IK]");
+			} else {
+				arm3modeSwitch.setText("[FK] /  IK ");
+			}
+		}
+		
+		if( subject == arm3Xpos ) {
+			world.robot0.rDown = ( !world.robot0.rDown ) ? true : false;
+			world.robot0.fDown = false;
+		}
+		if( subject == arm3Xneg ) {
+			world.robot0.fDown = ( !world.robot0.fDown ) ? true : false;
+			world.robot0.rDown = false;
+		}
+		
+		if( subject == arm3Ypos ) {
+			world.robot0.tDown = ( !world.robot0.tDown ) ? true : false;
+			world.robot0.gDown = false;
+		}
+		if( subject == arm3Yneg ) {
+			world.robot0.gDown = ( !world.robot0.gDown ) ? true : false;
+			world.robot0.tDown = false;
+		}
+		
+		if( subject == arm3Zpos ) {
+			world.robot0.yDown = ( !world.robot0.yDown ) ? true : false;
+			world.robot0.hDown = false;
+		}
+		if( subject == arm3Zneg ) {
+			world.robot0.hDown = ( !world.robot0.hDown ) ? true : false;
+			world.robot0.yDown = false;
 		}
 	}
 

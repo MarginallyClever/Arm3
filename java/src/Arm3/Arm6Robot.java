@@ -601,6 +601,7 @@ extends RobotWithSerialConnection {
 
 	
 	protected void keyAction(KeyEvent e,boolean state) {
+		/*
 		switch(e.getKeyCode()) {
 		case KeyEvent.VK_R: rDown=state;  break;
 		case KeyEvent.VK_F: fDown=state;  break;
@@ -615,7 +616,7 @@ extends RobotWithSerialConnection {
 		case KeyEvent.VK_O: oDown=state;  break;
 		case KeyEvent.VK_L: lDown=state;  break;
 		case KeyEvent.VK_P: pDown=state;  break;
-		}
+		}*/
 	}
 
 	

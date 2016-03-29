@@ -139,6 +139,7 @@ implements ActionListener {
 		//gl2.glEnable(GL2.GL_CULL_FACE);
 		
 		gl2.glPushMatrix();
+			camera.update(dt);
 			camera.render(gl2);
 
 			gl2.glDisable(GL2.GL_LIGHTING);

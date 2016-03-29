@@ -2,7 +2,6 @@ package Arm3;
 
 
 import java.awt.BorderLayout;
-import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -13,12 +12,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -48,11 +44,6 @@ import Generators.HilbertCurveGenerator;
 import Generators.YourMessageHereGenerator;
 
 import com.jogamp.opengl.util.Animator;
-
-//import com.jogamp.newt.event.awt.AWTKeyAdapter;
-//import com.jogamp.newt.event.KeyEvent;
-import java.awt.event.KeyEvent;
-
 
 
 public class MainGUI 
@@ -204,6 +195,7 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
         last_time = start_time = System.currentTimeMillis();
     }
 	
+	/*
 	private String getPath(Class cls) {
 	    String cn = cls.getName();
 	    //System.out.println("cn "+cn);
@@ -217,6 +209,7 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 	    }
 	    return path;
 	}
+	*/
 	
 	protected void EnumerateJarContents(String absPathToJarFile) throws IOException {
 	    JarFile jarFile = new JarFile(absPathToJarFile);
@@ -224,7 +217,9 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 	    while (e.hasMoreElements()) {
 			_EnumerateJarContents(e.nextElement());
 		}
+	    jarFile.close();
 	}
+	
 	
 	private static void _EnumerateJarContents(Object obj) {
        JarEntry entry = (JarEntry)obj;
@@ -232,13 +227,15 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
        long size = entry.getSize();
        long compressedSize = entry.getCompressedSize();
        System.out.println(name + "\t" + size + "\t" + compressedSize);
-     }
+    }
+	
 	
 	/**
 	 * Load a class from a Jar file.
 	 * @param absPathToJarFile c:\some\path\myfile.jar
 	 * @param className like com.mypackage.myclass
 	 */
+	/*
 	protected void LoadClasses(String absPathToJarFile,String className) {
 		File file  = new File(absPathToJarFile);
 		try {
@@ -250,6 +247,7 @@ implements ActionListener, GLEventListener, MouseListener, MouseMotionListener, 
 		catch(MalformedURLException e) {}
 		catch(ClassNotFoundException e) {}
 	}
+	*/
 	
 	
 	protected void LoadGenerators() {

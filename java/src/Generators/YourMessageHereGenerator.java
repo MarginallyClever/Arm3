@@ -274,7 +274,7 @@ public class YourMessageHereGenerator implements GcodeGenerator {
 				case '}':  name="B3CLOSE";  break;
 				case '~':  name="TILDE";  break;
 				case '\\':  name="BSLASH";  break;
-				case 'É':  name="SPACE";  break;
+				case 'ï¿½':  name="SPACE";  break;
 				default: name=Character.toString(letter);  break;
 				}
 			}
@@ -325,6 +325,7 @@ public class YourMessageHereGenerator implements GcodeGenerator {
 		        		output.write(";\n");
 		        	}
 		        }
+		        in.close();
 			} else {
 				// file not found
 				System.out.print(fn);

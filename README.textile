@@ -1,26 +1,22 @@
-h1. Arm3
+h1. ROBO-0023 Arm3 
 
 _An open source palletizing robot based on the ABB 460_
 
-For more information please visit "Marginally Clever's official page":http://www.marginallyclever.com/shop/robot-arms
-
 h2. Get it
 
-Please visit "the homepage":http://www.marginallyclever.com/shop/robot-arms for the accompanying hardware kit.
+Please visit "the homepage":http://www.marginallyclever.com/ for the accompanying hardware kit .
 
 h2. Make it
 
-Please visit "The wiki":https://learn.marginallyclever.com/ for all the instructions
+Please visit "The wiki":http://learn.marginallyclever.com/ for all the instructions
 
 h2. Get help
 
-Please visit "the forums":https://marginallyclever.com/forum 
+Please visit "the forums":https://marginallyclever.com/forums
 
 h2. Notes
 
-The contents of ./last_official_release are also available on "the official website":http://www.marginallyclever.com/shop/robot-arms/palletizing-robot-1
-
-h2. To run the project in eclipse
+h3. To run the project in eclipse
 
 * Choose File > Import > General > Existing Projects into Workspace and select "Next".
 * Choose "Browse" next to "Select root directory" and select the root folder of your download/clone from github.

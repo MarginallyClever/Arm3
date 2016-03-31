@@ -335,9 +335,9 @@ void SetGUID(long newid) {
  * display helpful information
  */
 void help() {
-  Serial.print(F("Arm3:"));
-  Serial.print(EEPROM_GetGUID());
-  Serial.print(':');
+  Serial.print(F("HELLO WORLD! I AM ARM3 #"));
+  Serial.println(EEPROM_GetGUID());
+  Serial.print("v");
   Serial.println(EEPROM_GetVersion());
   Serial.println(F("Commands:"));
   Serial.println(F("M18; - disable motors"));

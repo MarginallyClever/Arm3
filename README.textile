@@ -2,6 +2,10 @@ h1. ROBO-0023 Arm3
 
 _An open source palletizing robot based on the ABB 460_
 
+This is the Arduino firmware that lives in the arduino brain of the robot.  It empowers the robot to understand inverse kinematics and move according to gcode commands that you give it.
+
+This project is designed to pair the human-friendly interface "Evil Overlord":https://github.com/i-make-robots/Evil-Overlord 
+
 h2. Get it
 
 Please visit "the homepage":http://www.marginallyclever.com/ for the accompanying hardware kit .
@@ -13,31 +17,6 @@ Please visit "The wiki":http://learn.marginallyclever.com/ for all the instructi
 h2. Get help
 
 Please visit "the forums":https://marginallyclever.com/forums
-
-h2. Notes
-
-h3. To run the project in eclipse
-
-* Choose File > Import > General > Existing Projects into Workspace and select "Next".
-* Choose "Browse" next to "Select root directory" and select the root folder of your download/clone from github.
-* eclipse will scan the folder and find the project.  Choose "Finish"
-
-*java.lang.UnsatisfiedLinkError: no rxtxSerial in java.library.path thrown while loading gnu.io.RXTXCommDriver*
-
-* Open the Project Explorder View, select the Makelangelo project, and choose File > Properties.
-* Choose Java Build Path > Libraries and then expand "RXTXcomm.jar - Makelangelo" clicking the arrow on the left.
-* Choose Native library location > Edit > Choose Workspace
-* In Windows 32 bit, choose Makelangelo/src/rxtxnative/Windows/i368-mingw32
-* In Windows 64 bit, choose Makelangelo/src/rxtxnative/Windows/x64
-* In OSX, choose Makelangelo/src/rxtxnative/Mac_OS_X
-* In Linux, choose Makelangelo/src/rxtxnative/Linux and select your flavor of linux.
-
-*The project: JOGL which is referenced by the classpath, does not exist*
-
-"How to download JOGL":https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Download_a_JogAmp_library
-
-"How to create a JOGL user library":https://jogamp.org/wiki/index.php/Setting_up_a_JogAmp_project_in_your_favorite_IDE#Create_a_user_library
-
 
 h2. Copyright
 
@@ -55,9 +34,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Foobar. If not, see http://www.gnu.org/licenses/.
-
-h2. See Also
-
-* "The Makelangelo homepage":http://www.makelangelo.com/ 
-* "The wiki":https://learn.marginallyclever.com/
-* "The forums":https://marginallyclever.com/forum/
